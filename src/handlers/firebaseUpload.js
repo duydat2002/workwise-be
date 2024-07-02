@@ -45,4 +45,38 @@ const multipleUpload = async (files, destination) => {
   return urls;
 };
 
-module.exports = { singleUpload, multipleUpload, upload };
+const deleteFileStorageByFileName = async (destination, fileName) => {
+  try {
+    await bucket.file(`${destination}/${fileName}`).delete();
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+const deleteFileStorageByUrl = async (url) => {
+  try {
+    const filePath = url.split(
+      `https://storage.googleapis.com/${bucket.name}/`
+    )[1];
+    await bucket.file(filePath).delete();
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+const deleteFolderStorage = async (destination) => {
+  try {
+    await bucket.deleteFiles({ prefix: destination });
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+module.exports = {
+  upload,
+  singleUpload,
+  multipleUpload,
+  deleteFileStorageByFileName,
+  deleteFileStorageByUrl,
+  deleteFolderStorage,
+};

@@ -36,7 +36,7 @@ routes(app);
 mongoose
   .connect(process.env.MONGODB_CONNECTION_STRING)
   .then(() => {
-    console.log(`Connected to ${process.env.MONGODB_CONNECTION_STRING}`);
+    console.log(`Connected to mongodb`);
     server.listen(process.env.PORT, () => {
       console.log(`Instagram running onn PORT: ${process.env.PORT}`);
     });

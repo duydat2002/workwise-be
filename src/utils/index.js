@@ -1,7 +1,7 @@
-const checkFileType = require("@/utils/checkFileType");
+const checkFile = require("@/utils/checkFile");
 
 const utils = {
-  ...checkFileType,
+  ...checkFile,
 };
 
 module.exports = utils;
