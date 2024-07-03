@@ -7,6 +7,8 @@ const { upload } = require("@/handlers/firebaseUpload");
 const router = express.Router();
 
 router.get("/get", verifyToken, handleErrors(userController.getUser));
+router.get("/find-by-uid", handleErrors(userController.findUserByUid));
+router.get("/find-by-email", handleErrors(userController.findUsersByEmail));
 router.post("/create", handleErrors(userController.createUser));
 router.patch(
   "/update-info",

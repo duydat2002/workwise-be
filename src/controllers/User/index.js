@@ -4,6 +4,7 @@ const {
 } = require("@/handlers/firebaseUpload");
 const User = require("@/models/user");
 const { checkFilesType, checkFilesSize } = require("@/utils");
+const admin = require("@/configs/firebase-admin");
 
 const userController = {
   getUser: async (req, res) => {
@@ -19,6 +20,36 @@ const userController = {
     return res.status(200).json({
       success: true,
       result: { user },
+      message: "Successfully get user.",
+    });
+  },
+  findUserByUid: async (req, res) => {
+    const { uid } = req.query;
+
+    const user = await User.findOne({ uid: uid });
+
+    if (!user)
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found user.",
+      });
+
+    return res.status(200).json({
+      success: true,
+      result: { user },
+      message: "Successfully find user by uid.",
+    });
+  },
+  findUsersByEmail: async (req, res) => {
+    const { email } = req.query;
+
+    const users = await User.find({ email: email, emailVerified: true });
+
+    return res.status(200).json({
+      success: true,
+      result: { users },
+      message: "Successfully find users by email.",
     });
   },
   createUser: async (req, res) => {
@@ -40,11 +71,12 @@ const userController = {
       emailVerified: emailVerified ?? false,
     });
 
-    user.save();
+    await user.save();
 
     return res.status(200).json({
       success: true,
       result: { user },
+      message: "Successfully create user.",
     });
   },
   updateUserInfo: async (req, res) => {
@@ -126,6 +158,7 @@ const userController = {
     user.emailVerified = true;
 
     await user.save();
+    await admin.auth().updateUser(user.uid, { emailVerified: true });
 
     return res.status(200).json({
       success: true,
