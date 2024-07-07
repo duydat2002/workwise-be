@@ -1,7 +1,31 @@
 const mongoose = require("mongoose");
 const autopopulate = require("mongoose-autopopulate");
 
-const { Schema, Types } = mongoose;
+const { Schema } = mongoose;
+
+const membersSchema = new Schema(
+  {
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      autopopulate: {
+        select: "_id uid fullname email avatar",
+        maxDepth: 1,
+      },
+    },
+    role: {
+      type: String,
+      enum: {
+        values: ["admin", "member"],
+        message: "User role type must be in ['admin', 'member']",
+      },
+      default: "member",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
 const ProjectSchema = new Schema(
   {
@@ -19,14 +43,10 @@ const ProjectSchema = new Schema(
     },
     labels: [
       {
-        name: {
-          type: String,
-          unique: true,
-          required: true,
-        },
-        color: {
-          type: String,
-          required: true,
+        type: Schema.Types.ObjectId,
+        ref: "Label",
+        autopopulate: {
+          maxDepth: 1,
         },
       },
     ],
@@ -38,36 +58,13 @@ const ProjectSchema = new Schema(
         maxDepth: 1,
       },
     },
-    members: [
+    members: [membersSchema],
+    createdTaskLabels: [
       {
-        user: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-          autopopulate: {
-            select: "_id uid fullname email avatar",
-            maxDepth: 1,
-          },
-        },
-        role: {
-          type: String,
-          enum: {
-            values: ["admin", "member"],
-            message: "User role type must be in ['admin', 'member']",
-          },
-          default: "member",
-        },
-      },
-    ],
-    taskLabels: [
-      {
-        name: {
-          type: String,
-          unique: true,
-          required: true,
-        },
-        color: {
-          type: String,
-          required: true,
+        type: Schema.Types.ObjectId,
+        ref: "Label",
+        autopopulate: {
+          maxDepth: 1,
         },
       },
     ],
@@ -87,6 +84,24 @@ const ProjectSchema = new Schema(
       type: Date,
       requried: [true, "Due date is required."],
     },
+    taskGroups: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "TaskGroup",
+        autopopulate: {
+          maxDepth: 1,
+        },
+      },
+    ],
+    activities: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Activity",
+        autopopulate: {
+          maxDepth: 1,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -1,6 +1,7 @@
 const handleErrors = (fn) => {
   return function (req, res, next) {
     return fn(req, res, next).catch((error) => {
+      console.log(error?.message);
       // Cast error
       if (error.name == "CastError") {
         return res.status(400).json({
@@ -59,6 +60,7 @@ const handleErrors = (fn) => {
         result: null,
         message: "Something went wrong.",
         error: error,
+        errorMessage: error?.message,
       });
     });
   };

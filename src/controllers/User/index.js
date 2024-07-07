@@ -1,10 +1,9 @@
-const {
-  singleUpload,
-  deleteFileStorageByUrl,
-} = require("@/handlers/firebaseUpload");
 const User = require("@/models/user");
+const Label = require("@/models/label");
+const { singleUpload, deleteFileStorageByUrl } = require("@/handlers/firebaseUpload");
 const { checkFilesType, checkFilesSize } = require("@/utils");
 const admin = require("@/configs/firebase-admin");
+const { Types } = require("mongoose");
 
 const userController = {
   getUser: async (req, res) => {
@@ -59,7 +58,7 @@ const userController = {
       return res.status(400).json({
         success: false,
         result: null,
-        message: "Thiếu thông tin.",
+        message: "Missing information.",
       });
     }
 
@@ -164,6 +163,111 @@ const userController = {
       success: true,
       result: null,
       message: "Successfully verify email.",
+    });
+  },
+
+  //ProjectLabels
+  getUserProjectLabels: async (req, res) => {
+    const user = await User.findById(req.userId);
+
+    const createdProjectLabels = user.createdProjectLabels.sort((a, b) =>
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    );
+
+    return res.status(200).json({
+      success: true,
+      result: { createdProjectLabels },
+      message: "Successfully get user project labels.",
+    });
+  },
+  createUserProjectLabel: async (req, res) => {
+    const { name, color } = req.body;
+
+    const checkExist = await Label.findOne({
+      ownerId: req.userId,
+      name: name,
+    });
+
+    if (checkExist) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Label already exist.",
+      });
+    }
+
+    const newLabel = await new Label({
+      name: name,
+      color: color,
+      ownerType: "user",
+      ownerId: req.userId,
+    }).save();
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      {
+        $addToSet: { createdProjectLabels: newLabel.id },
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      result: { label: newLabel },
+      message: "Successfully create user project label.",
+    });
+  },
+  updateUserProjectLabel: async (req, res) => {
+    const { name, color } = req.body;
+    const labelId = req.params.labelId;
+    const userId = new Types.ObjectId(req.userId);
+
+    const checkExist = await Label.findOne({
+      _id: { $ne: labelId },
+      ownerId: userId,
+      name: name,
+    });
+
+    if (checkExist) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Label already exist.",
+      });
+    }
+
+    const updatedLabel = await Label.findByIdAndUpdate(
+      labelId,
+      {
+        name: name,
+        color: color,
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      result: { label: updatedLabel },
+      message: "Successfully update user project label.",
+    });
+  },
+  deleteUserProjectLabel: async (req, res) => {
+    const labelId = req.params.labelId;
+
+    const label = await Label.findOneAndDelete({ _id: labelId });
+
+    if (!label) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found this label.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully delete user project label.",
     });
   },
 };

@@ -27,16 +27,12 @@ const UserSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    projectLabels: [
+    createdProjectLabels: [
       {
-        name: {
-          type: String,
-          unique: true,
-          required: true,
-        },
-        color: {
-          type: String,
-          required: true,
+        type: Schema.Types.ObjectId,
+        ref: "Label",
+        autopopulate: {
+          maxDepth: 1,
         },
       },
     ],

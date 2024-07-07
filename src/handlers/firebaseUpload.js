@@ -11,9 +11,7 @@ const singleUpload = async (file, destination) => {
       return resolve(null);
     }
 
-    const blob = bucket.file(
-      `${destination}/${uuidv4()}.${file.originalname.split(".").reverse()[0]}`
-    );
+    const blob = bucket.file(`${destination}/${uuidv4()}.${file.originalname.split(".").reverse()[0]}`);
     const blobStream = blob.createWriteStream({
       metadata: {
         contentType: file.mimetype,
@@ -55,9 +53,7 @@ const deleteFileStorageByFileName = async (destination, fileName) => {
 
 const deleteFileStorageByUrl = async (url) => {
   try {
-    const filePath = url.split(
-      `https://storage.googleapis.com/${bucket.name}/`
-    )[1];
+    const filePath = url.split(`https://storage.googleapis.com/${bucket.name}/`)[1];
     await bucket.file(filePath).delete();
   } catch (error) {
     console.log(error.message);
@@ -72,6 +68,32 @@ const deleteFolderStorage = async (destination) => {
   }
 };
 
+const getFileUrls = async (destination) => {
+  try {
+    const [files] = await bucket.getFiles({
+      prefix: destination,
+      // delimiter: "/",
+    });
+
+    const imageUrls = [];
+
+    for (const file of files) {
+      const [metadata] = await file.getMetadata();
+
+      if (metadata.contentType && metadata.contentType.startsWith("image/")) {
+        await file.makePublic();
+
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+        imageUrls.push(publicUrl);
+      }
+    }
+
+    return imageUrls;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 module.exports = {
   upload,
   singleUpload,
@@ -79,4 +101,5 @@ module.exports = {
   deleteFileStorageByFileName,
   deleteFileStorageByUrl,
   deleteFolderStorage,
+  getFileUrls,
 };

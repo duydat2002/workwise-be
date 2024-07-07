@@ -16,7 +16,7 @@ const server = createServer(app);
 
 app.use(
   cors({
-    origin: ["https://instagram-mevn.vercel.app", "http://localhost:5173"],
+    origin: ["http://192.168.1.2:4173", "http://localhost:5173"],
   })
 );
 app.use(cookieParser());
