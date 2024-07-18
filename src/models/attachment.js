@@ -16,14 +16,14 @@ const AttachmentSchema = new Schema(
     ownerType: {
       type: String,
       enum: {
-        values: ["task", "approval"],
-        message: "Owner type must be in ['task', 'approval']",
+        values: ["Task", "Approval"],
+        message: "Owner type must be in ['Task', 'Approval']",
       },
-      required: true,
+      // required: true,
     },
     ownerId: {
       type: Schema.Types.ObjectId,
-      required: true,
+      // required: true,
       refPath: "ownerType",
       autopopulate: {
         maxDepth: 1,
@@ -35,11 +35,11 @@ const AttachmentSchema = new Schema(
     },
     minetype: {
       type: String,
-      required: true,
+      // required: true,
     },
     url: {
       type: String,
-      required: true,
+      // required: true,
     },
   },
   { timestamps: true }

@@ -1,3 +1,4 @@
+const { NOTIFICATION_ACTION } = require("@/constant");
 const mongoose = require("mongoose");
 const autopopulate = require("mongoose-autopopulate");
 
@@ -19,35 +20,38 @@ const NotificationSchema = new Schema(
         ref: "User",
       },
     ],
+    project: {
+      type: Schema.Types.ObjectId,
+      ref: "Project",
+      autopopulate: {
+        select: "_id name background",
+        maxDepth: 1,
+      },
+    },
     type: {
       type: String,
       enum: {
         values: ["normal", "invitation"],
         message: "Notification type must be in ['normal', 'invitation']",
       },
-      required: true,
+      default: "normal",
     },
-    entityType: {
+    datas: {
+      type: Map,
+      of: Object,
+    },
+    action: {
       type: String,
-      enum: {
-        values: ["project", "taskgroup", "task"],
-        message: "Entity type must be in ['project', 'taskgroup', 'task']",
-      },
-      required: true,
-    },
-    entity: {
-      type: Schema.Types.ObjectId,
-      required: true,
-      refPath: "entityType",
-      autopopulate: {
-        maxDepth: 1,
-      },
-    },
-    content: {
-      type: String,
+      enum: NOTIFICATION_ACTION,
       required: true,
     },
     readBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    respondedBy: [
       {
         type: Schema.Types.ObjectId,
         ref: "User",

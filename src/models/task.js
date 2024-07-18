@@ -65,20 +65,15 @@ const TaskSchema = new Schema(
     status: {
       type: String,
       enum: {
-        values: ["todo", "inprogress", "completed", "archived"],
-        message: "Task status must be in ['todo', 'inprogress', 'completed', 'archived']",
+        values: ["todo", "inprogress", "completed"],
+        message: "Task status must be in ['todo', 'inprogress', 'completed']",
       },
       default: "todo",
     },
-    activities: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Activity",
-        autopopulate: {
-          maxDepth: 1,
-        },
-      },
-    ],
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
     attachments: [
       {
         type: Schema.Types.ObjectId,

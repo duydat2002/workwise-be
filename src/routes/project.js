@@ -14,4 +14,12 @@ router.patch("/:projectId/archive", verifyToken, handleErrors(projectController.
 router.patch("/:projectId/unarchive", verifyToken, handleErrors(projectController.unarchiveProject));
 router.delete("/:projectId", verifyToken, handleErrors(projectController.deleteProject));
 
+//Project Members
+router.post("/:projectId/invite-members", verifyToken, handleErrors(projectController.inviteProjectMember));
+router.patch("/:projectId/change-role", verifyToken, handleErrors(projectController.changeProjectMemberRole));
+router.post("/:projectId/delete-member", verifyToken, handleErrors(projectController.deleteProjectMember));
+
+//Project activities
+router.get("/:projectId/activities", verifyToken, handleErrors(projectController.getProjectActivities));
+
 module.exports = router;

@@ -17,9 +17,17 @@ const membersSchema = new Schema(
       type: String,
       enum: {
         values: ["admin", "member"],
-        message: "User role type must be in ['admin', 'member']",
+        message: "Member role type must be in ['admin', 'member']",
       },
       default: "member",
+    },
+    status: {
+      type: String,
+      enum: {
+        values: ["pending", "accepted"],
+        message: "Member status type must be in ['pending', 'accepted']",
+      },
+      default: "pending",
     },
   },
   {
@@ -68,14 +76,6 @@ const ProjectSchema = new Schema(
         },
       },
     ],
-    status: {
-      type: String,
-      enum: {
-        values: ["active", "archived"],
-        message: "Project status must be in ['active', 'archived']",
-      },
-      default: "active",
-    },
     startDate: {
       type: Date,
       requried: [true, "Start date is required."],
@@ -84,27 +84,40 @@ const ProjectSchema = new Schema(
       type: Date,
       requried: [true, "Due date is required."],
     },
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
     taskGroups: [
       {
         type: Schema.Types.ObjectId,
         ref: "TaskGroup",
         autopopulate: {
-          maxDepth: 1,
-        },
-      },
-    ],
-    activities: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Activity",
-        autopopulate: {
-          maxDepth: 1,
+          maxDepth: 2,
         },
       },
     ],
   },
   { timestamps: true }
 );
+
+ProjectSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
+  const User = mongoose.model("User");
+  const TaskGroup = mongoose.model("TaskGroup");
+  const Task = mongoose.model("Task");
+
+  const deletedProject = await Project.findOne(this.getFilter()).lean();
+  if (!deletedProject) next();
+
+  const userIds = deletedProject.members.map((m) => m.user);
+  await Promise.all([
+    User.updateMany({ _id: { $in: userIds } }, { $pull: { projects: deletedProject._id } }),
+    TaskGroup.deleteMany({ projectId: deletedProject._id }),
+    Task.deleteMany({ projectId: deletedProject._id }),
+  ]);
+
+  next();
+});
 
 ProjectSchema.plugin(autopopulate);
 

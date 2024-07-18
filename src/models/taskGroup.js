@@ -9,29 +9,23 @@ const TaskGroupSchema = new Schema(
       type: String,
       required: true,
     },
-    description: {
-      type: String,
-      required: false,
-    },
     color: {
       type: String,
-      required: false,
+      required: true,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
     projectId: {
       type: Schema.Types.ObjectId,
       ref: "Project",
+      required: true,
     },
-    status: {
-      type: String,
-      enum: {
-        values: ["active", "archived"],
-        message: "Task group status must be in ['active', 'archived']",
-      },
-      default: "active",
+    isArchived: {
+      type: Boolean,
+      default: false,
     },
     tasks: [
       {
@@ -45,6 +39,21 @@ const TaskGroupSchema = new Schema(
   },
   { timestamps: true }
 );
+
+TaskGroupSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
+  const Project = mongoose.model("Project");
+  const Task = mongoose.model("Task");
+
+  const deletedTaskGroup = await TaskGroup.findOne(this.getFilter()).lean();
+  if (!deletedTaskGroup) next();
+
+  await Promise.all([
+    Project.updateOne({ _id: deletedTaskGroup.projectId }, { $pull: { taskGroups: deletedTaskGroup._id } }),
+    Task.deleteMany({ taskGroupId: deletedTaskGroup._id }),
+  ]);
+
+  next();
+});
 
 TaskGroupSchema.plugin(autopopulate);
 

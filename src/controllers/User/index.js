@@ -1,5 +1,8 @@
 const User = require("@/models/user");
+const Project = require("@/models/project");
 const Label = require("@/models/label");
+const Activity = require("@/models/activity");
+const Notification = require("@/models/notification");
 const { singleUpload, deleteFileStorageByUrl } = require("@/handlers/firebaseUpload");
 const { checkFilesType, checkFilesSize } = require("@/utils");
 const admin = require("@/configs/firebase-admin");
@@ -49,6 +52,20 @@ const userController = {
       success: true,
       result: { users },
       message: "Successfully find users by email.",
+    });
+  },
+  findUsersByNameOrEmail: async (req, res) => {
+    const { search } = req.query;
+
+    const users = await User.find({
+      $or: [{ fullname: { $regex: search, $options: "mi" } }, { email: { $regex: search, $options: "mi" } }],
+      emailVerified: true,
+    });
+
+    return res.status(200).json({
+      success: true,
+      result: { users },
+      message: "Successfully find users by fullname and email.",
     });
   },
   createUser: async (req, res) => {
@@ -166,6 +183,179 @@ const userController = {
     });
   },
 
+  //Project members
+  acceptInviteProject: async (req, res) => {
+    const { projectId, senderId, notificationId } = req.body;
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        isArchived: false,
+        "members.user": req.userId,
+      },
+      {
+        $set: {
+          "members.$.status": "accepted",
+        },
+      },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    const receivers = project.members.filter((m) => m.user.id != req.userId).map((m) => m.user.id);
+
+    const [_p1, _p2, updatedNotification, notification] = await Promise.all([
+      User.findByIdAndUpdate(req.userId, {
+        $addToSet: { projects: project._id },
+      }),
+      new Activity({
+        user: req.userId,
+        project: projectId,
+        type: "member_join_project",
+      }).save(),
+      Notification.findByIdAndUpdate(
+        notificationId,
+        { $addToSet: { respondedBy: req.userId, readBy: req.userId } },
+        { new: true }
+      ),
+      new Notification({
+        sender: req.userId,
+        receivers: receivers,
+        project: projectId,
+        action: "accept_join_project",
+        datas: {
+          project,
+        },
+      }).save(),
+    ]);
+
+    global.io.to(req.userId).emit("project:join", project.id);
+    global.io.to(req.userId).emit("project:created", project);
+    global.io.to(req.userId).emit("notification:updated", updatedNotification);
+    global.io.to(projectId).emit("notification:new-notification", notification);
+    global.io.to(projectId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully accept invite project.",
+    });
+  },
+  unacceptInviteProject: async (req, res) => {
+    const { projectId, senderId, notificationId } = req.body;
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        isArchived: false,
+        "members.user": req.userId,
+      },
+      {
+        $pull: {
+          members: { user: req.userId },
+        },
+      },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    const [updatedNotification, notification] = await Promise.all([
+      Notification.findByIdAndUpdate(
+        notificationId,
+        { $addToSet: { respondedBy: req.userId }, readBy: req.userId },
+        { new: true }
+      ),
+      new Notification({
+        sender: req.userId,
+        receivers: [senderId],
+        project: projectId,
+        action: "unaccept_join_project",
+        datas: {
+          project,
+        },
+      }).save(),
+    ]);
+
+    global.io.to(projectId).emit("project:updated", project);
+    global.io.to(req.userId).emit("notification:updated", updatedNotification);
+    global.io.to(senderId).emit("notification:new-notification", notification);
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully accept invite project.",
+    });
+  },
+  leaveProject: async (req, res) => {
+    const { projectId } = req.body;
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        isArchived: false,
+        "members.user": req.userId,
+      },
+      {
+        $pull: {
+          members: { user: req.userId },
+        },
+      },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    const receivers = project.members.filter((m) => m.role == "admin" && m.user.id != req.userId).map((m) => m.user.id);
+
+    const [_p1, _p2, notification] = await Promise.all([
+      User.findByIdAndUpdate(req.userId, { $pull: { projects: project._id } }),
+      new Activity({
+        user: req.userId,
+        project: projectId,
+        type: "member_left_project",
+      }).save(),
+      new Notification({
+        sender: req.userId,
+        receivers: receivers,
+        project: projectId,
+        action: "left_project",
+        datas: {
+          project,
+        },
+      }).save(),
+    ]);
+
+    global.io.to(req.userId).emit("project:deleted", project.id);
+    global.io.to(projectId).except(req.userId).emit("notification:new-notification", notification);
+    global.io.to(projectId).except(req.userId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully leaving project.",
+    });
+  },
+
   //ProjectLabels
   getUserProjectLabels: async (req, res) => {
     const user = await User.findById(req.userId);
@@ -199,7 +389,7 @@ const userController = {
     const newLabel = await new Label({
       name: name,
       color: color,
-      ownerType: "user",
+      ownerType: "User",
       ownerId: req.userId,
     }).save();
 
@@ -268,6 +458,41 @@ const userController = {
       success: true,
       result: null,
       message: "Successfully delete user project label.",
+    });
+  },
+
+  //Notification
+  getNotifications: async (req, res) => {
+    const notifications = await Notification.find({ receivers: req.userId }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      result: { notifications },
+      message: "Successfully get user notifications.",
+    });
+  },
+  readNotification: async (req, res) => {
+    const notificationId = req.params.notificationId;
+    const notification = await Notification.findByIdAndUpdate(notificationId, {
+      $addToSet: { readBy: req.userId },
+    });
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully read notification.",
+    });
+  },
+  unreadNotification: async (req, res) => {
+    const notificationId = req.params.notificationId;
+    const notification = await Notification.findByIdAndUpdate(notificationId, {
+      $pull: { readBy: req.userId },
+    });
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully unread notifications.",
     });
   },
 };

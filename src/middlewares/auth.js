@@ -2,12 +2,11 @@ const admin = require("@/configs/firebase-admin");
 const User = require("@/models/user");
 
 const verifyToken = async (req, res, next) => {
-  // req.userId = "6684b3732540bd538c8ea452";
-  // const user = await User.findById("6684b3732540bd538c8ea452");
-  // req.user = user;
-  // next();
-
   const token = req.headers.authorization?.split(" ")[1];
+
+  // req.userId = token;
+  // next();
+  // return;
 
   if (!token) {
     return res.status(403).json({

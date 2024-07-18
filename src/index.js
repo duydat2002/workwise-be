@@ -6,6 +6,8 @@ const routes = require("./routes");
 const { createServer } = require("http");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const { Server } = require("socket.io");
+const socketHandle = require("./sockets");
 
 dotenv.config();
 
@@ -13,6 +15,11 @@ const app = express();
 const port = 3000;
 
 const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: ["https://admin.socket.io", "http://localhost:5555", "http://localhost:5173"],
+  },
+});
 
 app.use(
   cors({
@@ -28,8 +35,11 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+  console.log(`Workwise app listening on port ${port}`);
 });
+
+socketHandle(io);
+global.io = io;
 
 routes(app);
 
@@ -38,7 +48,7 @@ mongoose
   .then(() => {
     console.log(`Connected to mongodb`);
     server.listen(process.env.PORT, () => {
-      console.log(`Instagram running onn PORT: ${process.env.PORT}`);
+      console.log(`Workwise running onn PORT: ${process.env.PORT}`);
     });
   })
   .catch((err) => console.log(err));

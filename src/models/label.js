@@ -15,8 +15,8 @@ const LabelSchema = new Schema({
   ownerType: {
     type: String,
     enum: {
-      values: ["user", "project"],
-      message: "Owner Type must be in ['user', 'project']",
+      values: ["User", "Project"],
+      message: "Owner Type must be in ['User', 'Project']",
     },
     required: true,
   },

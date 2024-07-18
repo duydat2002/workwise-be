@@ -3,15 +3,12 @@ const User = require("@/models/user");
 const TaskGroup = require("@/models/taskGroup");
 const Task = require("@/models/task");
 const Activity = require("@/models/activity");
+const Notification = require("@/models/notification");
 const { singleUpload, multipleUpload } = require("@/handlers/firebaseUpload");
-
-const checkMemberIsAdmin = (project, userId) => {
-  return !!project.members.find((m) => m.user._id == userId && m.role == "admin");
-};
 
 const projectController = {
   getProjects: async (req, res) => {
-    const projects = await Project.find({ "members.user": req.userId });
+    const projects = await Project.find({ "members.user": req.userId, isArchived: false });
 
     return res.status(200).json({
       success: true,
@@ -20,7 +17,7 @@ const projectController = {
     });
   },
   getProjectById: async (req, res) => {
-    const project = await Project.findById(req.params.projectId);
+    const project = await Project.findOne({ _id: req.params.projectId, isArchived: false });
 
     if (!project) {
       return res.status(400).json({
@@ -56,12 +53,16 @@ const projectController = {
       name,
       description,
       labels: labels ? JSON.parse(labels) : undefined,
-      members: [{ user: req.userId, role: "admin" }],
+      members: [{ user: req.userId, role: "admin", status: "accepted" }],
       startDate,
       dueDate,
       background: backgroundUrl,
       createdBy: req.userId,
     }).save();
+
+    await User.findByIdAndUpdate(req.userId, {
+      $addToSet: { projects: project._id },
+    });
 
     return res.status(200).json({
       success: true,
@@ -70,68 +71,92 @@ const projectController = {
     });
   },
   updateProject: async (req, res) => {
+    const projectId = req.params.projectId;
     let { name, description, labels, startDate, dueDate, backgroundUrl } = req.body;
     const background = req.file;
-    const cac = req.userId;
 
     if (!backgroundUrl && background) {
       backgroundUrl = await singleUpload(background, `background`);
     }
 
-    const project = await Project.findById(req.params.projectId);
+    const oldProject = await Project.findOne({
+      _id: projectId,
+      isArchived: false,
+      members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+    });
 
-    if (!project) {
+    if (!oldProject) {
       return res.status(400).json({
         success: false,
         result: null,
-        message: "Cannot found project.",
+        message: "Cannot found project or you do not have permission to perform this action.",
       });
     }
 
-    if (!checkMemberIsAdmin(project, req.userId)) {
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "User does not have permissions to perform this action.",
-      });
-    }
+    const project = await Project.findByIdAndUpdate(
+      oldProject._id,
+      {
+        name,
+        description,
+        labels: labels ? JSON.parse(labels) : undefined,
+        startDate,
+        dueDate,
+        background: backgroundUrl,
+      },
+      { new: true }
+    );
 
-    if (name) project.name = name;
-    if (description) project.description = description;
-    if (labels) project.labels = JSON.parse(labels);
-    if (startDate) project.startDate = startDate;
-    if (backgroundUrl) project.background = backgroundUrl;
+    await new Activity({
+      user: req.userId,
+      project: projectId,
+      type: "update_project",
+      datas: {
+        oldProject: oldProject,
+        newProject: project,
+      },
+    }).save();
 
-    await project.save();
+    global.io.to(projectId).emit("project:updated", project);
 
     return res.status(200).json({
       success: true,
-      result: { project },
+      result: null,
       message: "Successfully update project.",
     });
   },
   archiveProject: async (req, res) => {
-    const project = await Project.findById(req.params.projectId);
+    const projectId = req.params.projectId;
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+      },
+      {
+        isArchived: true,
+      },
+      { new: true }
+    );
 
     if (!project) {
       return res.status(400).json({
         success: false,
         result: null,
-        message: "Cannot found project.",
+        message: "Cannot found project or you do not have permission to perform this action.",
       });
     }
 
-    if (!checkMemberIsAdmin(project, req.userId)) {
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "User does not have permissions to perform this action.",
-      });
-    }
+    await Promise.all([
+      TaskGroup.updateMany({ projectId: projectId }, { isArchived: true }),
+      Task.updateMany({ projectId: projectId }, { isArchived: true }),
+      new Activity({
+        user: req.userId,
+        project: projectId,
+        type: "archive_project",
+      }).save(),
+    ]);
 
-    project.status = "archived";
-
-    await project.save();
+    global.io.to(projectId).emit("project:updated", project);
 
     return res.status(200).json({
       success: true,
@@ -140,27 +165,38 @@ const projectController = {
     });
   },
   unarchiveProject: async (req, res) => {
-    const project = await Project.findById(req.params.projectId);
+    const projectId = req.params.projectId;
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+      },
+      {
+        isArchived: false,
+      },
+      { new: true }
+    );
 
     if (!project) {
       return res.status(400).json({
         success: false,
         result: null,
-        message: "Cannot found project.",
+        message: "Cannot found project or you do not have permission to perform this action.",
       });
     }
 
-    if (!checkMemberIsAdmin(project, req.userId)) {
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "User does not have permissions to perform this action.",
-      });
-    }
+    await Promise.all([
+      TaskGroup.updateMany({ projectId: projectId }, { isArchived: false }),
+      Task.updateMany({ projectId: projectId }, { isArchived: false }),
+      new Activity({
+        user: req.userId,
+        project: projectId,
+        type: "unarchive_project",
+      }).save(),
+    ]);
 
-    project.status = "active";
-
-    await project.save();
+    global.io.to(projectId).emit("project:updated", project);
 
     return res.status(200).json({
       success: true,
@@ -169,30 +205,210 @@ const projectController = {
     });
   },
   deleteProject: async (req, res) => {
-    const project = await Project.findById(req.params.projectId);
+    const projectId = req.params.projectId;
+
+    const project = await Project.findOneAndDelete({
+      _id: projectId,
+      members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+    });
 
     if (!project) {
       return res.status(400).json({
         success: false,
         result: null,
-        message: "Cannot found project.",
+        message: "Cannot found project or you do not have permission to perform this action.",
       });
     }
 
-    if (!checkMemberIsAdmin(project, req.userId)) {
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "User does not have permissions to perform this action.",
-      });
-    }
-
-    await project.deleteOne();
+    global.io.to(projectId).emit("project:deleted", projectId);
 
     return res.status(200).json({
       success: true,
       result: null,
       message: "Successfully delete project.",
+    });
+  },
+
+  // Project members
+  inviteProjectMember: async (req, res) => {
+    const projectId = req.params.projectId;
+    const { members, role } = req.body;
+
+    const newMembers = members.map((member) => ({
+      user: member,
+      role: role,
+      status: "pending",
+    }));
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        isArchived: false,
+        members: {
+          $elemMatch: { user: req.userId, role: "admin", status: "accepted" },
+        },
+      },
+      {
+        $addToSet: { members: { $each: newMembers } },
+      },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    const notification = await new Notification({
+      sender: req.userId,
+      receivers: members,
+      type: "invitation",
+      action: "invite_to_project",
+      datas: {
+        project,
+      },
+    }).save();
+
+    global.io.to(members).emit("notification:new-notification", notification);
+    global.io.to(projectId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: { members: project.members },
+      message: "Successfully invite members to project.",
+    });
+  },
+  changeProjectMemberRole: async (req, res) => {
+    const projectId = req.params.projectId;
+    const { member, role } = req.body;
+
+    const project = await Project.findOne({
+      _id: projectId,
+      isArchived: false,
+      members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+      "members.user": member,
+    });
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    const checkAtLeastOneAdmin = project.members.filter((m) => m.role == "admin" && m.status == "accepted").length > 1;
+
+    if (role == "admin" || (role == "member" && checkAtLeastOneAdmin)) {
+      project.members.find((m) => m.user.id == member).role = role;
+      await project.save();
+    }
+
+    global.io.to(projectId).emit("project:updated", project);
+
+    new Activity({
+      user: req.userId,
+      project: projectId,
+      type: "change_role_member_project",
+      datas: {
+        member: { id: member, role },
+      },
+    }).save();
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully change member role.",
+    });
+  },
+  deleteProjectMember: async (req, res) => {
+    const projectId = req.params.projectId;
+    const { member } = req.body;
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        isArchived: false,
+        members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+        "members.user": member,
+      },
+      {
+        $pull: {
+          members: { user: member },
+        },
+      },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    const [_p1, _p2, notification] = await Promise.all([
+      User.findByIdAndUpdate(member, { $pull: { projects: projectId } }),
+      new Activity({
+        user: req.userId,
+        project: projectId,
+        type: "remove_member_project",
+        datas: {
+          member: { id: member },
+        },
+      }).save(),
+      new Notification({
+        sender: req.userId,
+        receivers: member,
+        project: projectId,
+        action: "was_kicked_project",
+        datas: {
+          project,
+        },
+      }).save(),
+    ]);
+
+    global.io.to(member).emit("project:deleted", project.id);
+    global.io.to(member).emit("notification:new-notification", notification);
+    global.io.to(projectId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: { members: project.members },
+      message: "Successfully delete member.",
+    });
+  },
+
+  // Project activities
+  getProjectActivities: async (req, res) => {
+    const projectId = req.params.projectId;
+
+    const project = await Project.findOne({
+      _id: projectId,
+      isArchived: false,
+      members: {
+        $elemMatch: { user: req.userId, status: "accepted" },
+      },
+    });
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    const activities = await Activity.find({ project: projectId });
+
+    return res.status(200).json({
+      success: true,
+      result: { activities },
+      message: "Successfully get project activities.",
     });
   },
 };
