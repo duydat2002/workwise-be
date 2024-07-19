@@ -62,10 +62,9 @@ const taskGroupController = {
       new Activity({
         user: req.userId,
         project: projectId,
+        taskGroup: taskGroup._id,
         type: "create_taskgroup",
-        datas: {
-          taskGroup: taskGroup,
-        },
+        datas: {},
       }).save(),
     ]);
 
@@ -115,7 +114,8 @@ const taskGroupController = {
       taskGroup.save(),
       new Activity({
         user: req.userId,
-        project: projectId,
+        project: taskGroup.projectId,
+        taskGroup: taskGroup._id,
         type: "update_taskgroup",
         datas: {
           oldTaskGroup: oldTaskGroup,
@@ -124,7 +124,7 @@ const taskGroupController = {
       }).save(),
     ]);
 
-    global.io.to(projectId).emit("taskgroup:updated", taskGroup);
+    global.io.to(taskGroup.projectId).emit("taskgroup:updated", taskGroup);
 
     return res.status(200).json({
       success: true,
@@ -175,10 +175,9 @@ const taskGroupController = {
       new Activity({
         user: req.userId,
         project: projectId,
+        taskGroup: taskGroupId,
         type: "archive_taskgroup",
-        datas: {
-          taskGroup: taskGroup,
-        },
+        datas: {},
       }).save(),
     ]);
 
@@ -213,10 +212,9 @@ const taskGroupController = {
       new Activity({
         user: req.userId,
         project: projectId,
+        taskGroup: taskGroupId,
         type: "unarchive_taskgroup",
-        datas: {
-          taskGroup: taskGroup,
-        },
+        datas: {},
       }).save(),
     ]);
 
@@ -243,17 +241,15 @@ const taskGroupController = {
 
     await checkUserIsAdmin(taskGroup.projectId, req.userId);
 
-    await Promise.all([
-      taskGroup.deleteOne(),
-      new Activity({
-        user: req.userId,
-        project: projectId,
-        type: "remove_taskgroup",
-        datas: {
-          taskGroup: taskGroup,
-        },
-      }).save(),
-    ]);
+    await new Activity({
+      user: req.userId,
+      project: projectId,
+      type: "remove_taskgroup",
+      datas: {
+        taskGroup: taskGroup,
+      },
+    }).save();
+    await taskGroup.deleteOne();
 
     global.io.to(projectId).emit("taskgroup:deleted", taskGroup);
 

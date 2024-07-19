@@ -23,6 +23,14 @@ const ActivitySchema = new Schema(
       },
       required: true,
     },
+    taskGroup: {
+      type: Schema.Types.ObjectId,
+      ref: "TaskGroup",
+      autopopulate: {
+        select: "_id name color",
+        maxDepth: 1,
+      },
+    },
     task: {
       type: Schema.Types.ObjectId,
       ref: "Task",

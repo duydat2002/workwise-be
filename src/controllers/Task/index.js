@@ -55,6 +55,7 @@ const taskController = {
       new Activity({
         user: req.userId,
         project: projectId,
+        taskGroup: taskGroupId,
         task: task._id,
         type: "create_task",
       }).save(),
@@ -68,6 +69,7 @@ const taskController = {
       message: "Successfully create tasks.",
     });
   },
+  reorderTask: async (req, res) => {},
   updateTask: async (req, res) => {},
   testActivity: async (req, res) => {
     // const activity = await new Activity({

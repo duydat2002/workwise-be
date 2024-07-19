@@ -309,12 +309,14 @@ const projectController = {
 
     global.io.to(projectId).emit("project:updated", project);
 
+    const memberInfo = await User.findById(member);
+
     new Activity({
       user: req.userId,
       project: projectId,
       type: "change_role_member_project",
       datas: {
-        member: { id: member, role },
+        member: { id: member, role: role, fullname: memberInfo.fullname, email: memberInfo.email },
       },
     }).save();
 
@@ -351,14 +353,14 @@ const projectController = {
       });
     }
 
-    const [_p1, _p2, notification] = await Promise.all([
-      User.findByIdAndUpdate(member, { $pull: { projects: projectId } }),
+    const userInfo = await User.findByIdAndUpdate(member, { $pull: { projects: projectId } });
+    const [_p1, notification] = await Promise.all([
       new Activity({
         user: req.userId,
         project: projectId,
         type: "remove_member_project",
         datas: {
-          member: { id: member },
+          member: { id: member, fullname: userInfo.fullname, email: userInfo.email },
         },
       }).save(),
       new Notification({
@@ -403,7 +405,7 @@ const projectController = {
       });
     }
 
-    const activities = await Activity.find({ project: projectId });
+    const activities = await Activity.find({ project: projectId }).sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
