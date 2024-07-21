@@ -93,7 +93,7 @@ const ProjectSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "TaskGroup",
         autopopulate: {
-          maxDepth: 2,
+          maxDepth: 3,
         },
       },
     ],
@@ -113,7 +113,7 @@ ProjectSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
   await Promise.all([
     User.updateMany({ _id: { $in: userIds } }, { $pull: { projects: deletedProject._id } }),
     TaskGroup.deleteMany({ projectId: deletedProject._id }),
-    Task.deleteMany({ projectId: deletedProject._id }),
+    Task.deleteMany({ project: deletedProject._id }),
   ]);
 
   next();

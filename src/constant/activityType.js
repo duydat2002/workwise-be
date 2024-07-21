@@ -12,6 +12,7 @@ const ACTIVITY_TYPE = [
   "unarchive_taskgroup",
   "remove_taskgroup",
   "create_task",
+  "move_task",
   "update_task",
   "archive_task",
   "unarchive_task",

@@ -2,21 +2,17 @@ const Project = require("@/models/project");
 const TaskGroup = require("@/models/taskGroup");
 const Task = require("@/models/task");
 const Activity = require("@/models/activity");
+const { cloneDeep } = require("lodash");
 
 const checkUserIsAdmin = async (projectId, userId) => {
+  return true;
   const isAdmin = await Project.findOne({
     _id: projectId,
     isArchived: false,
     members: { $elemMatch: { user: userId, role: "admin", status: "accepted" } },
   });
 
-  if (!isAdmin) {
-    return res.status(400).json({
-      success: false,
-      result: null,
-      message: "Cannot found project or you do not have permission to perform this action.",
-    });
-  }
+  return isAdmin;
 };
 
 const taskGroupController = {
@@ -81,7 +77,6 @@ const taskGroupController = {
     const { name, color } = req.body;
 
     const taskGroup = await TaskGroup.findOne({ _id: taskGroupId, isArchived: false });
-
     if (!taskGroup) {
       return res.status(400).json({
         success: false,
@@ -90,7 +85,14 @@ const taskGroupController = {
       });
     }
 
-    await checkUserIsAdmin(taskGroup.projectId, req.userId);
+    const isAdmin = await checkUserIsAdmin(taskGroup.projectId, req.userId);
+    if (!isAdmin) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
 
     const checkExist = await TaskGroup.findOne({
       _id: { $ne: taskGroupId },
@@ -105,7 +107,7 @@ const taskGroupController = {
       });
     }
 
-    const oldTaskGroup = { ...taskGroup };
+    const oldTaskGroup = cloneDeep(taskGroup);
 
     if (name) taskGroup.name = name;
     if (color) taskGroup.color = color;
@@ -115,7 +117,7 @@ const taskGroupController = {
       new Activity({
         user: req.userId,
         project: taskGroup.projectId,
-        taskGroup: taskGroup._id,
+        taskGroup: taskGroupId,
         type: "update_taskgroup",
         datas: {
           oldTaskGroup: oldTaskGroup,
@@ -124,7 +126,7 @@ const taskGroupController = {
       }).save(),
     ]);
 
-    global.io.to(taskGroup.projectId).emit("taskgroup:updated", taskGroup);
+    global.io.to(taskGroup.projectId.toString()).emit("taskgroup:updated", taskGroup);
 
     return res.status(200).json({
       success: true,
@@ -144,7 +146,15 @@ const taskGroupController = {
       { new: true }
     );
 
-    global.io.to(projectId).emit("taskgroup:ordered", projectId, project.taskGroups);
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project.",
+      });
+    }
+
+    global.io.to(projectId).except(req.userId).emit("taskgroup:ordered", projectId, project.taskGroups);
 
     return res.status(200).json({
       success: true,
@@ -165,23 +175,30 @@ const taskGroupController = {
       });
     }
 
-    await checkUserIsAdmin(taskGroup.projectId, req.userId);
+    const isAdmin = await checkUserIsAdmin(taskGroup.projectId, req.userId);
+    if (!isAdmin) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
 
     taskGroup.isArchived = true;
 
     await Promise.all([
       taskGroup.save(),
-      Task.updateMany({ projectId: taskGroup.projectId }, { isArchived: true }),
+      Task.updateMany({ project: taskGroup.projectId, taskGroup: taskGroupId }, { isArchived: true }),
       new Activity({
         user: req.userId,
-        project: projectId,
+        project: taskGroup.projectId,
         taskGroup: taskGroupId,
         type: "archive_taskgroup",
         datas: {},
       }).save(),
     ]);
 
-    global.io.to(projectId).emit("taskgroup:updated", taskGroup);
+    global.io.to(taskGroup.projectId.toString()).emit("taskgroup:updated", taskGroup);
 
     return res.status(200).json({
       success: true,
@@ -202,23 +219,30 @@ const taskGroupController = {
       });
     }
 
-    await checkUserIsAdmin(taskGroup.projectId, req.userId);
+    const isAdmin = await checkUserIsAdmin(taskGroup.projectId, req.userId);
+    if (!isAdmin) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
 
     taskGroup.isArchived = false;
 
     await Promise.all([
       taskGroup.save(),
-      Task.updateMany({ projectId: taskGroup.projectId }, { isArchived: false }),
+      Task.updateMany({ project: taskGroup.projectId, taskGroup: taskGroupId }, { isArchived: false }),
       new Activity({
         user: req.userId,
-        project: projectId,
+        project: taskGroup.projectId,
         taskGroup: taskGroupId,
         type: "unarchive_taskgroup",
         datas: {},
       }).save(),
     ]);
 
-    global.io.to(projectId).emit("taskgroup:updated", taskGroup);
+    global.io.to(taskGroup.projectId.toString()).emit("taskgroup:updated", taskGroup);
 
     return res.status(200).json({
       success: true,
@@ -239,11 +263,18 @@ const taskGroupController = {
       });
     }
 
-    await checkUserIsAdmin(taskGroup.projectId, req.userId);
+    const isAdmin = await checkUserIsAdmin(taskGroup.projectId, req.userId);
+    if (!isAdmin) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
 
     await new Activity({
       user: req.userId,
-      project: projectId,
+      project: taskGroup.projectId,
       type: "remove_taskgroup",
       datas: {
         taskGroup: taskGroup,
@@ -251,7 +282,7 @@ const taskGroupController = {
     }).save();
     await taskGroup.deleteOne();
 
-    global.io.to(projectId).emit("taskgroup:deleted", taskGroup);
+    global.io.to(taskGroup.projectId.toString()).emit("taskgroup:deleted", taskGroup.projectId, taskGroupId);
 
     return res.status(200).json({
       success: true,

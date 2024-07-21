@@ -2,6 +2,7 @@ const Project = require("@/models/project");
 const User = require("@/models/user");
 const TaskGroup = require("@/models/taskGroup");
 const Task = require("@/models/task");
+const Label = require("@/models/label");
 const Activity = require("@/models/activity");
 const Notification = require("@/models/notification");
 const { singleUpload, multipleUpload } = require("@/handlers/firebaseUpload");
@@ -382,6 +383,135 @@ const projectController = {
       success: true,
       result: { members: project.members },
       message: "Successfully delete member.",
+    });
+  },
+
+  // Task labels
+  getCreatedTaskLabels: async (req, res) => {
+    const projectId = req.params.projectId;
+
+    const project = await Project.findById(projectId);
+
+    const createdTaskLabels = project.createdTaskLabels.sort((a, b) =>
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    );
+
+    return res.status(200).json({
+      success: true,
+      result: { createdTaskLabels },
+      message: "Successfully get created task labels.",
+    });
+  },
+  createCreatedTaskLabel: async (req, res) => {
+    const projectId = req.params.projectId;
+    const { name, color } = req.body;
+
+    const checkExist = await Label.findOne({
+      ownerId: projectId,
+      name: name,
+    });
+
+    if (checkExist) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Label already exist.",
+      });
+    }
+
+    const newLabel = await new Label({
+      name: name,
+      color: color,
+      ownerType: "Project",
+      ownerId: projectId,
+    }).save();
+
+    const project = await Project.findByIdAndUpdate(
+      projectId,
+      {
+        $addToSet: { createdTaskLabels: newLabel.id },
+      },
+      { new: true }
+    );
+
+    global.io.to(projectId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: { label: newLabel },
+      message: "Successfully create created task label.",
+    });
+  },
+  updateCreatedTaskLabel: async (req, res) => {
+    const projectId = req.params.projectId;
+    const labelId = req.params.labelId;
+    const { name, color } = req.body;
+
+    const checkExist = await Label.findOne({
+      _id: { $ne: labelId },
+      ownerId: projectId,
+      name: name,
+    });
+
+    if (checkExist) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Label already exist.",
+      });
+    }
+
+    const updatedLabel = await Label.findByIdAndUpdate(
+      labelId,
+      {
+        name: name,
+        color: color,
+      },
+      { new: true }
+    );
+
+    const project = await Project.findById(projectId);
+
+    global.io.to(projectId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: { label: updatedLabel },
+      message: "Successfully update created task label.",
+    });
+  },
+  deleteCreatedTaskLabel: async (req, res) => {
+    const projectId = req.params.projectId;
+    const labelId = req.params.labelId;
+
+    const label = await Label.findOne({
+      _id: labelId,
+      ownerId: projectId,
+    });
+
+    if (!label) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found this label.",
+      });
+    }
+
+    const project = await Project.findByIdAndUpdate(
+      projectId,
+      {
+        $pull: { createdTaskLabels: label.id },
+      },
+      { new: true }
+    );
+    await label.deleteOne();
+
+    global.io.to(projectId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully delete created task label.",
     });
   },
 

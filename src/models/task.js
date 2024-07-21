@@ -53,14 +53,24 @@ const TaskSchema = new Schema(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
+      autopopulate: {
+        select: "_id uid fullname email avatar",
+        maxDepth: 1,
+      },
     },
-    projectId: {
+    project: {
       type: Schema.Types.ObjectId,
       ref: "Project",
+      autopopulate: {
+        maxDepth: 1,
+      },
     },
-    taskGroupId: {
+    taskGroup: {
       type: Schema.Types.ObjectId,
       ref: "TaskGroup",
+      autopopulate: {
+        maxDepth: 1,
+      },
     },
     status: {
       type: String,
@@ -104,6 +114,17 @@ const TaskSchema = new Schema(
   },
   { timestamps: true }
 );
+
+TaskSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
+  const TaskGroup = mongoose.model("TaskGroup");
+
+  const deletedTask = await Task.findOne(this.getFilter()).lean();
+  if (!deletedTask) next();
+
+  await Promise.all([TaskGroup.updateOne({ _id: deletedTask.taskGroup }, { $pull: { tasks: deletedTask._id } })]);
+
+  next();
+});
 
 TaskSchema.plugin(autopopulate);
 

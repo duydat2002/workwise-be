@@ -14,6 +14,20 @@ router.patch("/:projectId/archive", verifyToken, handleErrors(projectController.
 router.patch("/:projectId/unarchive", verifyToken, handleErrors(projectController.unarchiveProject));
 router.delete("/:projectId", verifyToken, handleErrors(projectController.deleteProject));
 
+//Project TaskLabels
+router.get("/:projectId/created-labels", verifyToken, handleErrors(projectController.getCreatedTaskLabels));
+router.post("/:projectId/created-labels", verifyToken, handleErrors(projectController.createCreatedTaskLabel));
+router.patch(
+  "/:projectId/created-labels/:labelId",
+  verifyToken,
+  handleErrors(projectController.updateCreatedTaskLabel)
+);
+router.delete(
+  "/:projectId/created-labels/:labelId",
+  verifyToken,
+  handleErrors(projectController.deleteCreatedTaskLabel)
+);
+
 //Project Members
 router.post("/:projectId/invite-members", verifyToken, handleErrors(projectController.inviteProjectMember));
 router.patch("/:projectId/change-role", verifyToken, handleErrors(projectController.changeProjectMemberRole));
