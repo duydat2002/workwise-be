@@ -242,7 +242,9 @@ const taskGroupController = {
       }).save(),
     ]);
 
-    global.io.to(taskGroup.projectId.toString()).emit("taskgroup:updated", taskGroup);
+    const newTaskGroup = await TaskGroup.findById(taskGroupId);
+
+    global.io.to(taskGroup.projectId.toString()).emit("taskgroup:updated", newTaskGroup);
 
     return res.status(200).json({
       success: true,
