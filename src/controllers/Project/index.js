@@ -9,7 +9,7 @@ const { singleUpload, multipleUpload } = require("@/handlers/firebaseUpload");
 
 const projectController = {
   getProjects: async (req, res) => {
-    const projects = await Project.find({ "members.user": req.userId, isArchived: false });
+    const projects = await Project.find({ "members.user": req.userId });
 
     return res.status(200).json({
       success: true,
@@ -148,8 +148,8 @@ const projectController = {
     }
 
     await Promise.all([
-      TaskGroup.updateMany({ projectId: projectId }, { isArchived: true }),
-      Task.updateMany({ projectId: projectId }, { isArchived: true }),
+      // TaskGroup.updateMany({ projectId: projectId }, { isArchived: true }),
+      // Task.updateMany({ projectId: projectId }, { isArchived: true }),
       new Activity({
         user: req.userId,
         project: projectId,
@@ -188,8 +188,8 @@ const projectController = {
     }
 
     await Promise.all([
-      TaskGroup.updateMany({ projectId: projectId }, { isArchived: false }),
-      Task.updateMany({ projectId: projectId }, { isArchived: false }),
+      // TaskGroup.updateMany({ projectId: projectId }, { isArchived: false }),
+      // Task.updateMany({ projectId: projectId }, { isArchived: false }),
       new Activity({
         user: req.userId,
         project: projectId,
