@@ -58,9 +58,10 @@ const taskGroupController = {
       new Activity({
         user: req.userId,
         project: projectId,
-        taskGroup: taskGroup._id,
         type: "create_taskgroup",
-        datas: {},
+        datas: {
+          taskGroup: taskGroup,
+        },
       }).save(),
     ]);
 
@@ -112,19 +113,16 @@ const taskGroupController = {
     if (name) taskGroup.name = name;
     if (color) taskGroup.color = color;
 
-    await Promise.all([
-      taskGroup.save(),
-      new Activity({
-        user: req.userId,
-        project: taskGroup.projectId,
-        taskGroup: taskGroupId,
-        type: "update_taskgroup",
-        datas: {
-          oldTaskGroup: oldTaskGroup,
-          newTaskGroup: taskGroup,
-        },
-      }).save(),
-    ]);
+    await taskGroup.save();
+    await new Activity({
+      user: req.userId,
+      project: taskGroup.projectId,
+      type: "update_taskgroup",
+      datas: {
+        oldTaskGroup: oldTaskGroup,
+        newTaskGroup: taskGroup,
+      },
+    }).save();
 
     global.io.to(taskGroup.projectId.toString()).emit("taskgroup:updated", taskGroup);
 
@@ -192,9 +190,10 @@ const taskGroupController = {
       new Activity({
         user: req.userId,
         project: taskGroup.projectId,
-        taskGroup: taskGroupId,
         type: "archive_taskgroup",
-        datas: {},
+        datas: {
+          taskGroup: taskGroup,
+        },
       }).save(),
     ]);
 
@@ -236,9 +235,10 @@ const taskGroupController = {
       new Activity({
         user: req.userId,
         project: taskGroup.projectId,
-        taskGroup: taskGroupId,
         type: "unarchive_taskgroup",
-        datas: {},
+        datas: {
+          taskGroup: taskGroup,
+        },
       }).save(),
     ]);
 

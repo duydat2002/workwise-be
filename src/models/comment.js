@@ -12,14 +12,31 @@ const CommentSchema = new Schema(
         select: "_id uid fullname email avatar",
         maxDepth: 1,
       },
+      required: true,
     },
-    taskId: {
+    project: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Project",
+      autopopulate: {
+        maxDepth: 1,
+      },
+      required: true,
+    },
+    task: {
+      type: Schema.Types.ObjectId,
+      ref: "Task",
+      autopopulate: {
+        maxDepth: 1,
+      },
+      required: true,
     },
     content: {
       type: String,
       required: true,
+    },
+    isUpdated: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

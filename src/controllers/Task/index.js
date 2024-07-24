@@ -63,8 +63,6 @@ const taskController = {
   createTask: async (req, res) => {
     const { projectId, taskGroupId, name } = req.body;
 
-    console.log(taskGroupId);
-
     const isAdmin = await checkUserIsAdmin(projectId, req.userId);
     if (!isAdmin) {
       return res.status(400).json({
@@ -82,16 +80,17 @@ const taskController = {
       description: "",
     }).save();
 
-    await Promise.all([
-      TaskGroup.findByIdAndUpdate(taskGroupId, { $addToSet: { tasks: task._id } }),
-      new Activity({
-        user: req.userId,
-        project: projectId,
-        taskGroup: taskGroupId,
-        task: task._id,
-        type: "create_task",
-      }).save(),
-    ]);
+    const taskGroup = await TaskGroup.findByIdAndUpdate(taskGroupId, { $addToSet: { tasks: task._id } }, { new: true });
+
+    await new Activity({
+      user: req.userId,
+      project: projectId,
+      task: task._id,
+      type: "create_task",
+      datas: {
+        taskGroup: taskGroup,
+      },
+    }).save();
 
     global.io.to(projectId).emit("task:created", task);
 
@@ -160,7 +159,6 @@ const taskController = {
       await new Activity({
         user: req.userId,
         project: task.project,
-        taskGroup: toTaskGroupId,
         task: taskId,
         type: "move_task",
         datas: {
@@ -221,7 +219,6 @@ const taskController = {
     await new Activity({
       user: req.userId,
       project: newTask.project,
-      taskGroup: newTask.taskGroup,
       task: taskId,
       type: "update_task",
       datas: {
@@ -274,7 +271,6 @@ const taskController = {
     await new Activity({
       user: req.userId,
       project: task.project,
-      taskGroup: task.taskGroup,
       task: taskId,
       type: "update_task",
       datas: {
@@ -335,7 +331,6 @@ const taskController = {
     const activity = new Activity({
       user: req.userId,
       project: task.project,
-      taskGroup: task.taskGroup,
       task: taskId,
     });
 
@@ -394,7 +389,6 @@ const taskController = {
     await new Activity({
       user: req.userId,
       project: task.project,
-      taskGroup: task.taskGroup,
       task: taskId,
       type: "archive_task",
     }).save();
@@ -438,7 +432,6 @@ const taskController = {
     await new Activity({
       user: req.userId,
       project: task.project,
-      taskGroup: task.taskGroup,
       task: taskId,
       type: "archive_task",
     }).save();
@@ -481,7 +474,6 @@ const taskController = {
       new Activity({
         user: req.userId,
         project: projectId,
-        taskGroup: taskGroupId,
         task: taskId,
         type: "remove_task",
       }).save(),
