@@ -518,10 +518,13 @@ const projectController = {
   // Project activities
   getProjectActivities: async (req, res) => {
     const projectId = req.params.projectId;
+    let { page, pageSize, sortNewest } = req.query;
+    page = isNaN(parseInt(page)) ? 1 : parseInt(page);
+    pageSize = isNaN(parseInt(pageSize)) ? 10 : parseInt(pageSize);
+    const skip = (page - 1) * pageSize;
 
     const project = await Project.findOne({
       _id: projectId,
-      isArchived: false,
       members: {
         $elemMatch: { user: req.userId, status: "accepted" },
       },
@@ -535,7 +538,10 @@ const projectController = {
       });
     }
 
-    const activities = await Activity.find({ project: projectId }).sort({ createdAt: -1 });
+    const activities = await Activity.find({ project: projectId })
+      .sort({ createdAt: sortNewest ? -1 : 1 })
+      .skip(skip)
+      .limit(pageSize);
 
     return res.status(200).json({
       success: true,

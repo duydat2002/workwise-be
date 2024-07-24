@@ -17,6 +17,7 @@ router.patch("/:taskId/archive", verifyToken, handleErrors(taskController.archiv
 router.patch("/:taskId/unarchive", verifyToken, handleErrors(taskController.unarchiveTask));
 router.delete("/:taskId", verifyToken, handleErrors(taskController.deleteTask));
 
-router.post("/activity", verifyToken, handleErrors(taskController.testActivity));
+// Task Activities
+router.get("/:taskId/activities", verifyToken, handleErrors(taskController.getTaskActivities));
 
 module.exports = router;

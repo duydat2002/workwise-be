@@ -488,32 +488,35 @@ const taskController = {
     });
   },
 
-  //
-  testActivity: async (req, res) => {
-    // const activity = await new Activity({
-    //   user: req.userId,
-    //   project: "669159743f45d083ae4b24a8",
-    //   type: "update_project",
-    //   datas: {
-    //     a: "aaaa",
-    //     b: "bbbb",
-    //   },
-    // }).save();
-    await new Attachment({
-      name: "123",
-    }).save();
-    await new Comment({
-      content: "abc",
-    }).save();
+  // Task Activities
+  getTaskActivities: async (req, res) => {
+    const taskId = req.params.taskId;
+    let { page, pageSize, sortNewest } = req.query;
+    page = isNaN(parseInt(page)) ? 1 : parseInt(page);
+    pageSize = isNaN(parseInt(pageSize)) ? 10 : parseInt(pageSize);
+    const skip = (page - 1) * pageSize;
 
-    await new Approval({
-      feekback: "123",
-    }).save();
+    const task = await Task.findById(taskId);
+
+    const isMember = task?.project?.members?.some((m) => m.user.id == req.userId && m.status == "accepted");
+
+    if (!task || !isMember) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found task or you do not have permission to perform this action.",
+      });
+    }
+
+    const activities = await Activity.find({ task: taskId })
+      .sort({ createdAt: sortNewest == "true" ? -1 : 1 })
+      .skip(skip)
+      .limit(pageSize);
 
     return res.status(200).json({
       success: true,
-      result: null,
-      message: "Successfully create activity.",
+      result: { activities, sortNewest: sortNewest },
+      message: "Successfully get task activities.",
     });
   },
 };
