@@ -20,6 +20,8 @@ const ACTIVITY_TYPE = [
   "assign_task",
   "unassign_task",
   "approval_task",
+  "accept_approval_task",
+  "reject_approval_task",
   "comment_task",
   "add_attachment_task",
   "remove_attachment_task",

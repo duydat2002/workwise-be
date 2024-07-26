@@ -133,7 +133,8 @@ const userController = {
       });
     }
 
-    const avatarUrl = await singleUpload(req.file, `${req.userId}/avatar`);
+    let avatarUrl = await singleUpload(req.file, `users/${req.userId}/avatar`);
+    avatarUrl = avatarUrl.url;
 
     const user = await User.findById(req.userId);
 
@@ -141,6 +142,10 @@ const userController = {
     user.avatar = avatarUrl;
 
     await Promise.all[(user.save(), deleteFileStorageByUrl(oldAvatar))];
+
+    const projects = await Project.find({ members: { $elemMatch: { user: req.userId } } }).distinct("id");
+
+    global.io.to(projects).emit("user:updated", user);
 
     return res.status(200).json({
       success: true,
@@ -154,6 +159,10 @@ const userController = {
     });
 
     await deleteFileStorageByUrl(user.avatar);
+
+    const projects = await Project.find({ members: { $elemMatch: { user: req.userId } } }).distinct("id");
+
+    global.io.to(projects).emit("user:updated", user);
 
     return res.status(200).json({
       success: true,

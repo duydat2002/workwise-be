@@ -43,7 +43,7 @@ const checkFilesSize = (files, maxSize) => {
   if (!isValidType)
     return {
       success: false,
-      message: `Các file phải có kích thước tối đa ${maxSize}kb.`,
+      message: `Các file phải có kích thước tối đa ${maxSize / (1024 * 1024)}mb.`,
     };
 
   return {

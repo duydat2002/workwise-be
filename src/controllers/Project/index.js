@@ -5,7 +5,7 @@ const Task = require("@/models/task");
 const Label = require("@/models/label");
 const Activity = require("@/models/activity");
 const Notification = require("@/models/notification");
-const { singleUpload, multipleUpload } = require("@/handlers/firebaseUpload");
+const { singleUpload, multipleUpload, deleteFileStorageByUrl } = require("@/handlers/firebaseUpload");
 
 const projectController = {
   getProjects: async (req, res) => {
@@ -46,10 +46,6 @@ const projectController = {
       });
     }
 
-    if (!backgroundUrl) {
-      backgroundUrl = await singleUpload(background, `background`);
-    }
-
     const project = await new Project({
       name,
       description,
@@ -57,13 +53,21 @@ const projectController = {
       members: [{ user: req.userId, role: "admin", status: "accepted" }],
       startDate,
       dueDate,
-      background: backgroundUrl,
       createdBy: req.userId,
-    }).save();
-
-    await User.findByIdAndUpdate(req.userId, {
-      $addToSet: { projects: project._id },
     });
+
+    if (!backgroundUrl) {
+      backgroundUrl = await singleUpload(background, `projects/${project._id.toString()}/background`);
+      backgroundUrl = backgroundUrl.url;
+    }
+
+    project.background = backgroundUrl;
+    await Promise.all([
+      project.save(),
+      User.findByIdAndUpdate(req.userId, {
+        $addToSet: { projects: project._id },
+      }),
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -77,7 +81,8 @@ const projectController = {
     const background = req.file;
 
     if (!backgroundUrl && background) {
-      backgroundUrl = await singleUpload(background, `background`);
+      backgroundUrl = await singleUpload(background, `projects/${projectId}/background`);
+      backgroundUrl = backgroundUrl.url;
     }
 
     const oldProject = await Project.findOne({
@@ -107,15 +112,18 @@ const projectController = {
       { new: true }
     );
 
-    await new Activity({
-      user: req.userId,
-      project: projectId,
-      type: "update_project",
-      datas: {
-        oldProject: oldProject,
-        newProject: project,
-      },
-    }).save();
+    await Promise.all([
+      deleteFileStorageByUrl(oldProject.background),
+      new Activity({
+        user: req.userId,
+        project: projectId,
+        type: "update_project",
+        datas: {
+          oldProject: oldProject,
+          newProject: project,
+        },
+      }).save(),
+    ]);
 
     global.io.to(projectId).emit("project:updated", project);
 

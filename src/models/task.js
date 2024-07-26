@@ -53,10 +53,6 @@ const TaskSchema = new Schema(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      autopopulate: {
-        select: "_id uid fullname email avatar",
-        maxDepth: 1,
-      },
     },
     project: {
       type: Schema.Types.ObjectId,
@@ -89,7 +85,7 @@ const TaskSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "Attachment",
         autopopulate: {
-          maxDepth: 1,
+          maxDepth: 2,
         },
       },
     ],
@@ -107,7 +103,7 @@ const TaskSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "Comment",
         autopopulate: {
-          maxDepth: 1,
+          maxDepth: 2,
         },
       },
     ],

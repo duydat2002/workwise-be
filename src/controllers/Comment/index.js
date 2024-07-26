@@ -86,15 +86,16 @@ const commentController = {
   },
   deleteComment: async (req, res) => {
     const commentId = req.params.commentId;
-    const { taskId } = req.query;
-    const task = await Task.findByIdAndUpdate(
-      taskId,
-      {
-        $pull: { comments: commentId },
-      },
-      { new: true }
-    );
 
+    const comment = await Comment.findOne({ _id: req.params.commentId });
+    if (!comment)
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found comment.",
+      });
+
+    const task = await Task.findById(comment.task.id);
     if (!task)
       return res.status(400).json({
         success: false,
@@ -102,14 +103,19 @@ const commentController = {
         message: "Cannot found task.",
       });
 
-    const comment = await Comment.findOneAndDelete({ _id: req.params.commentId, author: req.userId });
-
-    if (!comment)
+    const checkPermission =
+      comment.author == req.userId ||
+      task.project.members.map((m) => m.user.id == req.userId && m.role == "admin" && m.status == "accepted");
+    if (!checkPermission)
       return res.status(400).json({
         success: false,
         result: null,
-        message: "Cannot found comment or you do not have permission to perform this action.",
+        message: "You do not have permission to perform this action.",
       });
+
+    task.comments = task.comments.filter((c) => c.id != commentId);
+
+    await Promise.all([task.save(), comment.deleteOne()]);
 
     global.io.to(comment.project.id).emit("task:updated", task);
 

@@ -11,7 +11,11 @@ const singleUpload = async (file, destination) => {
       return resolve(null);
     }
 
-    const blob = bucket.file(`${destination}/${uuidv4()}.${file.originalname.split(".").reverse()[0]}`);
+    let originalname = decodeURIComponent(file.originalname);
+
+    const blob = bucket.file(
+      `${destination}/${originalname.split(".")[0]}_${new Date().getTime()}.${originalname.split(".").reverse()[0]}`
+    );
     const blobStream = blob.createWriteStream({
       metadata: {
         contentType: file.mimetype,
@@ -26,7 +30,11 @@ const singleUpload = async (file, destination) => {
     blobStream.on("finish", async () => {
       await blob.makePublic();
       const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-      resolve(publicUrl);
+      resolve({
+        name: originalname,
+        minetype: file.mimetype,
+        url: publicUrl,
+      });
     });
 
     blobStream.end(file.buffer);
