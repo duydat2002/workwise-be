@@ -29,7 +29,7 @@ const ApprovalSchema = new Schema(
       type: Date,
       required: false,
     },
-    feekback: {
+    feedback: {
       type: String,
       required: false,
     },

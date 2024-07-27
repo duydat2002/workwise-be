@@ -35,7 +35,7 @@ const taskController = {
   getTasksByProjectId: async (req, res) => {
     const projectId = req.params.projectId;
 
-    const tasks = await Task.find({ projectId: projectId });
+    const tasks = await Task.find({ project: projectId });
 
     return res.status(200).json({
       success: true,
