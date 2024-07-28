@@ -498,7 +498,7 @@ const taskController = {
 
     const task = await Task.findById(taskId);
 
-    const isMember = task?.project?.members?.some((m) => m.user.id == req.userId && m.status == "accepted");
+    const isMember = task?.project?.members?.some((m) => m.user == req.userId && m.status == "accepted");
 
     if (!task || !isMember) {
       return res.status(400).json({

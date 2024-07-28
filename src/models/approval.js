@@ -5,6 +5,11 @@ const { Schema } = mongoose;
 
 const ApprovalSchema = new Schema(
   {
+    task: {
+      type: Schema.Types.ObjectId,
+      ref: "Task",
+      required: true,
+    },
     requestedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -12,6 +17,7 @@ const ApprovalSchema = new Schema(
         select: "_id uid fullname email avatar",
         maxDepth: 1,
       },
+      required: true,
     },
     reviewedBy: {
       type: Schema.Types.ObjectId,
@@ -20,6 +26,7 @@ const ApprovalSchema = new Schema(
         select: "_id uid fullname email avatar",
         maxDepth: 1,
       },
+      required: true,
     },
     description: {
       type: String,
