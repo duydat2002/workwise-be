@@ -42,7 +42,7 @@ const approvalController = {
     });
 
     let attachments = [];
-    if (files.length > 0) {
+    if (files && files.length > 0) {
       const checkFileSize = checkFilesSize(files, 10 * 1024 * 1024);
       if (!checkFileSize.success) {
         return res.status(400).json({
@@ -52,7 +52,10 @@ const approvalController = {
         });
       }
 
-      const results = await multipleUpload(files, `projects/${task.project.id}/tasks/${taskId}`);
+      const results = await multipleUpload(
+        files,
+        `projects/${task.project.id}/tasks/${taskId}/approvals/${approval.id}`
+      );
       const attachmentsPromise = results.map(async (result) => {
         return await new Attachment({
           createdBy: req.userId,
@@ -70,8 +73,11 @@ const approvalController = {
       approval.attachments = attachments.map((a) => a.id);
     }
 
+    task.approvals.unshift(approval.id);
+
     await approval.save();
-    const [_p1, notification] = await Promise.all([
+    await task.save();
+    await Promise.all([
       new Activity({
         user: req.userId,
         project: task.project.id,
@@ -79,7 +85,10 @@ const approvalController = {
         type: "create_approval_task",
         datas: { approval },
       }).save(),
-      new Notification({
+    ]);
+
+    if (approval.reviewedBy.id != approval.requestedBy.id) {
+      const notification = await new Notification({
         sender: req.userId,
         receivers: reviewedBy,
         project: task.project.id,
@@ -88,10 +97,12 @@ const approvalController = {
           task,
           approval,
         },
-      }),
-    ]);
+      });
 
-    global.io.to(reviewedBy).emit("notification:new-notification", notification);
+      global.io.to(reviewedBy).emit("notification:new-notification", notification);
+    }
+
+    global.io.to(task.project.id).emit("task:updated", task);
 
     return res.status(200).json({
       success: true,
@@ -101,12 +112,19 @@ const approvalController = {
   },
   updateTaskApproval: async (req, res) => {
     const approvalId = req.params.approvalId;
-    const { reviewedBy, description } = req.body;
+    let { reviewedBy, description, removedAttachments } = req.body;
+    const files = req.files;
 
-    const approval = await Approval.findById(approvalId);
+    if (removedAttachments) removedAttachments = JSON.parse(removedAttachments);
+
+    const approval = await Approval.findOne({
+      _id: approvalId,
+      requestedBy: req.userId,
+      status: "pending",
+    });
     const oldApproval = cloneDeep(approval);
 
-    if (!approval || approval.requestedBy != req.userId)
+    if (!approval)
       return res.status(400).json({
         success: false,
         result: null,
@@ -121,8 +139,41 @@ const approvalController = {
         message: "Cannot found task or you do not have permission to perform this action.",
       });
 
-    approval.reviewedBy = reviewedBy;
+    if (reviewedBy && approval.reviewedBy != reviewedBy) approval.reviewedBy = reviewedBy;
     approval.description = description;
+
+    let attachments = [];
+    if (files && files.length > 0) {
+      const checkFileSize = checkFilesSize(files, 10 * 1024 * 1024);
+      if (!checkFileSize.success) {
+        return res.status(400).json({
+          success: false,
+          result: null,
+          message: checkFileSize.message,
+        });
+      }
+
+      const results = await multipleUpload(
+        files,
+        `projects/${task.project.id}/tasks/${task.id}/approvals/${approval.id}`
+      );
+      const attachmentsPromise = results.map(async (result) => {
+        return await new Attachment({
+          createdBy: req.userId,
+          task: task.id,
+          approval: approval.id,
+          name: result.name,
+          minetype: result.minetype,
+          url: result.url,
+        }).save();
+      });
+      attachments = await Promise.all(attachmentsPromise);
+    }
+    if (removedAttachments && removedAttachments.length > 0) {
+      approval.attachments = approval.attachments.filter((a) => removedAttachments.includes(a.id));
+    }
+    approval.attachments.push(...attachments.map((a) => a.id));
+
     await approval.save();
 
     await new Activity({
@@ -133,17 +184,39 @@ const approvalController = {
       datas: { oldApproval, newApproval: approval },
     }).save();
 
+    if (oldApproval.reviewedBy.id != approval.reviewedBy.id) {
+      const notification = await new Notification({
+        sender: req.userId,
+        receivers: approval.reviewedBy.id,
+        project: task.project.id,
+        action: "request_approval",
+        datas: {
+          task,
+          approval,
+        },
+      }).save();
+
+      global.io.to(approval.reviewedBy.id).emit("notification:new-notification", notification);
+    }
+
+    const newTask = await Task.findById(task.id);
+    global.io.to(task.project.id).emit("task:updated", newTask);
+
     return res.status(200).json({
       success: true,
-      result: null,
+      result: { approval },
       message: "Successfully update approval.",
     });
   },
   deleteTaskApproval: async (req, res) => {
     const approvalId = req.params.approvalId;
 
-    const approval = await Approval.findById(approvalId);
-    if (!approval || approval.requestedBy != req.userId)
+    const approval = await Approval.findOne({
+      _id: approvalId,
+      requestedBy: req.userId,
+      status: "pending",
+    });
+    if (!approval)
       return res.status(400).json({
         success: false,
         result: null,
@@ -158,15 +231,19 @@ const approvalController = {
         message: "Cannot found task or you do not have permission to perform this action.",
       });
 
+    task.approvals = task.approvals.filter((a) => a.id != approvalId);
+
     await new Activity({
       user: req.userId,
       project: task.project.id,
-      task: taskId,
+      task: task.id,
       type: "revoked_approval_task",
       datas: { approval },
     }).save();
 
     await approval.deleteOne();
+
+    global.io.to(task.project.id).emit("task:updated", task);
 
     return res.status(200).json({
       success: true,
@@ -178,8 +255,12 @@ const approvalController = {
     const approvalId = req.params.approvalId;
     const { feedback } = req.body;
 
-    const approval = await Approval.findById(approvalId);
-    if (!approval || approval.reviewedBy != req.userId)
+    const approval = await Approval.findOne({
+      _id: approvalId,
+      reviewedBy: req.userId,
+      status: "pending",
+    });
+    if (!approval)
       return res.status(400).json({
         success: false,
         result: null,
@@ -207,7 +288,11 @@ const approvalController = {
         type: "accept_approval_task",
         datas: { approval },
       }).save(),
-      new Notification({
+    ]);
+
+    if (approval.reviewedBy.id != approval.requestedBy.id) {
+      console.log("object", approval.reviewedBy.id, approval.requestedBy.id);
+      const notification = await new Notification({
         sender: req.userId,
         receivers: approval.requestedBy,
         project: task.project.id,
@@ -216,8 +301,13 @@ const approvalController = {
           task,
           approval,
         },
-      }),
-    ]);
+      }).save();
+
+      global.io.to(approval.reviewedBy.id).emit("notification:new-notification", notification);
+    }
+
+    const newTask = await Task.findById(task.id);
+    global.io.to(task.project.id).emit("task:updated", newTask);
 
     return res.status(200).json({
       success: true,
@@ -229,8 +319,12 @@ const approvalController = {
     const approvalId = req.params.approvalId;
     const { feedback } = req.body;
 
-    const approval = await Approval.findById(approvalId);
-    if (!approval || approval.reviewedBy != req.userId)
+    const approval = await Approval.findOne({
+      _id: approvalId,
+      reviewedBy: req.userId,
+      status: "pending",
+    });
+    if (!approval)
       return res.status(400).json({
         success: false,
         result: null,
@@ -250,15 +344,16 @@ const approvalController = {
     approval.approvedAt = new Date();
 
     await approval.save();
-    const [_p1, notification] = await Promise.all([
-      new Activity({
-        user: req.userId,
-        project: task.project.id,
-        task: task.id,
-        type: "reject_approval_task",
-        datas: { approval },
-      }).save(),
-      new Notification({
+    await new Activity({
+      user: req.userId,
+      project: task.project.id,
+      task: task.id,
+      type: "reject_approval_task",
+      datas: { approval },
+    }).save();
+
+    if (approval.reviewedBy.id != approval.requestedBy.id) {
+      const notification = await new Notification({
         sender: req.userId,
         receivers: approval.requestedBy,
         project: task.project.id,
@@ -267,8 +362,13 @@ const approvalController = {
           task,
           approval,
         },
-      }),
-    ]);
+      }).save();
+
+      global.io.to(approval.reviewedBy.id).emit("notification:new-notification", notification);
+    }
+
+    const newTask = await Task.findById(task.id);
+    global.io.to(task.project.id).emit("task:updated", newTask);
 
     return res.status(200).json({
       success: true,
