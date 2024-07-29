@@ -1,3 +1,4 @@
+const { deleteFolderStorage } = require("@/handlers/firebaseUpload");
 const mongoose = require("mongoose");
 const autopopulate = require("mongoose-autopopulate");
 
@@ -60,6 +61,22 @@ const ApprovalSchema = new Schema(
   },
   { timestamps: true }
 );
+
+ApprovalSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
+  const Task = mongoose.model("Task");
+  const Approval = mongoose.model("Approval");
+
+  const deletedApproval = await Approval.findOne(this.getFilter()).lean();
+  if (!deletedApproval) next();
+
+  const task = await Task.findById(deletedApproval.task);
+
+  console.log(`projects/${task.project.id}/tasks/${task.id}/approvals/${deletedApproval._id}`);
+
+  await deleteFolderStorage(`projects/${task.project.id}/tasks/${task.id}/approvals/${deletedApproval._id}`);
+
+  next();
+});
 
 ApprovalSchema.plugin(autopopulate);
 

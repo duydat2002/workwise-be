@@ -1,3 +1,4 @@
+const { deleteFolderStorage } = require("@/handlers/firebaseUpload");
 const mongoose = require("mongoose");
 const autopopulate = require("mongoose-autopopulate");
 
@@ -113,11 +114,22 @@ const TaskSchema = new Schema(
 
 TaskSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
   const TaskGroup = mongoose.model("TaskGroup");
+  const Comment = mongoose.model("Comment");
+  const Attachment = mongoose.model("Attachment");
+  const Approval = mongoose.model("Approval");
+  const Activity = mongoose.model("Activity");
 
-  const deletedTask = await Task.findOne(this.getFilter()).lean();
+  const deletedTask = await Task.findOne(this.getFilter());
   if (!deletedTask) next();
 
-  await Promise.all([TaskGroup.updateOne({ _id: deletedTask.taskGroup }, { $pull: { tasks: deletedTask._id } })]);
+  await Promise.all([
+    TaskGroup.updateOne({ _id: deletedTask.taskGroup }, { $pull: { tasks: deletedTask._id } }),
+    Comment.deleteMany({ task: deletedTask._id }),
+    Attachment.deleteMany({ task: deletedTask._id }),
+    Approval.deleteMany({ task: deletedTask._id }),
+    Activity.deleteMany({ task: deletedTask._id }),
+    deleteFolderStorage(`projects/${deletedTask.project.id}/tasks/${deletedTask.id}`),
+  ]);
 
   next();
 });

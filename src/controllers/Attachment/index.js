@@ -29,7 +29,7 @@ const attachmentController = {
       });
     }
 
-    const results = await multipleUpload(files, `projects/${task.project.id}/tasks/${taskId}`);
+    const results = await multipleUpload(files, `projects/${task.project.id}/tasks/${taskId}/attachments`);
 
     const attachmentsPromise = results.map(async (result) => {
       return await new Attachment({
@@ -125,7 +125,7 @@ const attachmentController = {
     task.attachments = task.attachments.filter((a) => a.id != attachmentId);
     const urlAttachment = attachment.url;
 
-    await Promise.all([task.save(), attachment.deleteOne(), deleteFileStorageByUrl(urlAttachment)]);
+    await Promise.all([task.save(), attachment.deleteOne()]);
 
     global.io.to(task.project.id).emit("task:updated", task);
 

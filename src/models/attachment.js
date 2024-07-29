@@ -1,3 +1,4 @@
+const { deleteFileStorageByUrl } = require("@/handlers/firebaseUpload");
 const mongoose = require("mongoose");
 const autopopulate = require("mongoose-autopopulate");
 
@@ -37,6 +38,18 @@ const AttachmentSchema = new Schema(
   },
   { timestamps: true }
 );
+
+AttachmentSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
+  const Task = mongoose.model("Task");
+  const Approval = mongoose.model("Approval");
+
+  const deletedAttachment = await Attachment.findOne(this.getFilter()).lean();
+  if (!deletedAttachment) next();
+
+  await deleteFileStorageByUrl(deletedAttachment.url);
+
+  next();
+});
 
 AttachmentSchema.plugin(autopopulate);
 

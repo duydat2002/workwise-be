@@ -474,8 +474,10 @@ const taskController = {
       new Activity({
         user: req.userId,
         project: projectId,
-        task: taskId,
         type: "remove_task",
+        datas: {
+          task,
+        },
       }).save(),
     ]);
 
