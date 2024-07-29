@@ -500,9 +500,9 @@ const taskController = {
 
     const task = await Task.findById(taskId);
 
-    const isMember = task?.project?.members?.some((m) => m.user == req.userId && m.status == "accepted");
+    // const isMember = task?.project?.members?.some((m) => m.user == req.userId && m.status == "accepted");
 
-    if (!task || !isMember) {
+    if (!task) {
       return res.status(400).json({
         success: false,
         result: null,

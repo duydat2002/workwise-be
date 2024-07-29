@@ -229,6 +229,8 @@ const projectController = {
       });
     }
 
+    console.log(projectId);
+
     global.io.to(projectId).emit("project:deleted", projectId);
 
     return res.status(200).json({
