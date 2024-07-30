@@ -276,6 +276,7 @@ const projectController = {
     const notification = await new Notification({
       sender: req.userId,
       receivers: members,
+      project: project,
       type: "invitation",
       action: "invite_to_project",
       datas: {
