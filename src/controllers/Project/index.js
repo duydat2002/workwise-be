@@ -113,7 +113,6 @@ const projectController = {
     );
 
     await Promise.all([
-      deleteFileStorageByUrl(oldProject.background),
       new Activity({
         user: req.userId,
         project: projectId,

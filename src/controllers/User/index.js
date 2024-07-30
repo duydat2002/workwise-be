@@ -249,7 +249,7 @@ const userController = {
     global.io.to(req.userId).emit("project:created", project);
     global.io.to(req.userId).emit("notification:updated", updatedNotification);
     global.io.to(projectId).except(req.userId).emit("notification:new-notification", notification);
-    global.io.to(projectId).emit("project:updated", project);
+    global.io.to(projectId).to(req.userId).emit("project:updated", project);
 
     return res.status(200).json({
       success: true,
