@@ -69,6 +69,10 @@ const projectController = {
       }),
     ]);
 
+    console.log("project:created");
+
+    global.io.to(req.userId).emit("project:created", project);
+
     return res.status(200).json({
       success: true,
       result: { project },

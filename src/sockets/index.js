@@ -10,7 +10,7 @@ const socketHandle = (io) => {
       userData.projects?.forEach((p) => {
         socket.join(p);
       });
-      console.log(userData.fullname);
+      console.log(userData.id, userData.fullname);
     });
 
     handleProjectSocket(io, socket);
