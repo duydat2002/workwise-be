@@ -18,8 +18,8 @@ const ActivitySchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Project",
       autopopulate: {
-        select: "_id name",
-        maxDepth: 1,
+        select: "_id name members",
+        maxDepth: 2,
       },
       required: true,
     },

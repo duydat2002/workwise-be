@@ -32,7 +32,7 @@ const TaskGroupSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "Task",
         autopopulate: {
-          maxDepth: 2,
+          maxDepth: 3,
         },
       },
     ],

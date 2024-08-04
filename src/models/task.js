@@ -95,7 +95,7 @@ const TaskSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "Approval",
         autopopulate: {
-          maxDepth: 1,
+          maxDepth: 2,
         },
       },
     ],
