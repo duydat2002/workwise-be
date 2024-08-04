@@ -178,7 +178,7 @@ const taskController = {
   },
   updateTask: async (req, res) => {
     const taskId = req.params.taskId;
-    let { name, description, priority, labels, startDate, dueDate, finishDate } = req.body;
+    let { name, description, priority, labels, startDate, dueDate, finishDate, assignee } = req.body;
 
     const task = await Task.findOne({
       _id: taskId,
@@ -210,6 +210,7 @@ const taskController = {
         priority,
         labels: labels ? JSON.parse(labels) : undefined,
         startDate,
+        assignee,
         dueDate,
         finishDate,
       },
