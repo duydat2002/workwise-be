@@ -105,6 +105,8 @@ ProjectSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
   const User = mongoose.model("User");
   const TaskGroup = mongoose.model("TaskGroup");
   const Task = mongoose.model("Task");
+  const Activity = mongoose.model("Activity");
+  const Notification = mongoose.model("Notification");
 
   const deletedProject = await Project.findOne(this.getFilter()).lean();
   if (!deletedProject) next();
@@ -114,6 +116,8 @@ ProjectSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
     User.updateMany({ _id: { $in: userIds } }, { $pull: { projects: deletedProject._id } }),
     TaskGroup.deleteMany({ projectId: deletedProject._id }),
     Task.deleteMany({ project: deletedProject._id }),
+    Activity.deleteMany({ project: deletedProject._id }),
+    Notification.deleteMany({ project: deletedProject._id }),
   ]);
 
   next();

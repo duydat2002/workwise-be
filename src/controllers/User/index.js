@@ -480,6 +480,22 @@ const userController = {
       message: "Successfully get user notifications.",
     });
   },
+  readAllNotification: async (req, res) => {
+    const notifications = await Notification.updateMany(
+      {
+        receivers: req.userId,
+      },
+      {
+        $addToSet: { readBy: req.userId },
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully read all notification.",
+    });
+  },
   readNotification: async (req, res) => {
     const notificationId = req.params.notificationId;
     const notification = await Notification.findByIdAndUpdate(notificationId, {

@@ -29,7 +29,8 @@ router.delete("/created-labels/:labelId", verifyToken, handleErrors(userControll
 
 //Notifications
 router.get("/notifications", verifyToken, handleErrors(userController.getNotifications));
-router.post("/notifications/notificationId/read", verifyToken, handleErrors(userController.readNotification));
-router.post("/notifications/notificationId/unread", verifyToken, handleErrors(userController.unreadNotification));
+router.post("/notifications/read-all", verifyToken, handleErrors(userController.readAllNotification));
+router.post("/notifications/:notificationId/read", verifyToken, handleErrors(userController.readNotification));
+router.post("/notifications/:notificationId/unread", verifyToken, handleErrors(userController.unreadNotification));
 
 module.exports = router;

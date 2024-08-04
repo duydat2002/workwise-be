@@ -8,6 +8,7 @@ const NOTIFICATION_ACTION = [
   "accept_approval",
   "reject_approval",
   "task_assigned",
+  "task_unassigned",
 ];
 
 module.exports = {
