@@ -30,6 +30,7 @@ router.delete(
 
 //Project Members
 router.post("/:projectId/invite-members", verifyToken, handleErrors(projectController.inviteProjectMember));
+router.patch("/:projectId/change-admin", verifyToken, handleErrors(projectController.changeProjectAdmin));
 router.patch("/:projectId/change-role", verifyToken, handleErrors(projectController.changeProjectMemberRole));
 router.post("/:projectId/delete-member", verifyToken, handleErrors(projectController.deleteProjectMember));
 

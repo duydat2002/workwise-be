@@ -136,6 +136,48 @@ const projectController = {
       message: "Successfully update project.",
     });
   },
+  changeProjectAdmin: async (req, res) => {
+    const projectId = req.params.projectId;
+    const { member } = req.body;
+
+    const project = await Project.findOne({
+      _id: projectId,
+      isArchived: false,
+      members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+      "members.user": member,
+    });
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    project.members.find((m) => m.user.id == member).role = "admin";
+    project.members.find((m) => m.user.id == req.userId).role = "member";
+    await project.save();
+
+    global.io.to(projectId).emit("project:updated", project);
+
+    const memberInfo = await User.findById(member);
+
+    new Activity({
+      user: req.userId,
+      project: projectId,
+      type: "change_role_member_project",
+      datas: {
+        member: { id: member, role: "admin", fullname: memberInfo.fullname, email: memberInfo.email },
+      },
+    }).save();
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully change project admin.",
+    });
+  },
   archiveProject: async (req, res) => {
     const projectId = req.params.projectId;
 
