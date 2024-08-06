@@ -12,6 +12,8 @@ router.post("/create", verifyToken, upload.single("background"), handleErrors(pr
 router.patch("/:projectId", verifyToken, upload.single("background"), handleErrors(projectController.updateProject));
 router.patch("/:projectId/archive", verifyToken, handleErrors(projectController.archiveProject));
 router.patch("/:projectId/unarchive", verifyToken, handleErrors(projectController.unarchiveProject));
+router.patch("/:projectId/complete", verifyToken, handleErrors(projectController.completeProject));
+router.patch("/:projectId/uncomplete", verifyToken, handleErrors(projectController.uncompleteProject));
 router.delete("/:projectId", verifyToken, handleErrors(projectController.deleteProject));
 
 //Project TaskLabels

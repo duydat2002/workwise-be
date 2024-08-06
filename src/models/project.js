@@ -84,6 +84,10 @@ const ProjectSchema = new Schema(
       type: Date,
       requried: [true, "Due date is required."],
     },
+    finishDate: {
+      type: Date,
+      requried: false,
+    },
     isArchived: {
       type: Boolean,
       default: false,

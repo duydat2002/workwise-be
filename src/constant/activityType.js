@@ -2,6 +2,8 @@ const ACTIVITY_TYPE = [
   "update_project",
   "archive_project",
   "unarchive_project",
+  "complete_project",
+  "reopen_project",
   "member_join_project",
   "member_left_project",
   "change_role_member_project",

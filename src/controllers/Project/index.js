@@ -258,6 +258,78 @@ const projectController = {
       message: "Successfully unarchive project.",
     });
   },
+  completeProject: async (req, res) => {
+    const projectId = req.params.projectId;
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+      },
+      {
+        finishDate: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    new Activity({
+      user: req.userId,
+      project: projectId,
+      type: "complete_project",
+    }).save();
+
+    global.io.to(projectId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully complete project.",
+    });
+  },
+  uncompleteProject: async (req, res) => {
+    const projectId = req.params.projectId;
+
+    const project = await Project.findOneAndUpdate(
+      {
+        _id: projectId,
+        members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
+      },
+      {
+        finishDate: null,
+      },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found project or you do not have permission to perform this action.",
+      });
+    }
+
+    new Activity({
+      user: req.userId,
+      project: projectId,
+      type: "reopen_project",
+    }).save();
+
+    global.io.to(projectId).emit("project:updated", project);
+
+    return res.status(200).json({
+      success: true,
+      result: null,
+      message: "Successfully uncomplete project.",
+    });
+  },
   deleteProject: async (req, res) => {
     const projectId = req.params.projectId;
 
