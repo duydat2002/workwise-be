@@ -8,6 +8,7 @@ const Approval = require("@/models/approval");
 const Comment = require("@/models/comment");
 const { singleUpload, multipleUpload } = require("@/handlers/firebaseUpload");
 const { cloneDeep } = require("lodash");
+const { sendMail } = require("@/mail/mailer");
 
 const checkUserIsAdmin = async (projectId, userId) => {
   return true;
@@ -178,7 +179,7 @@ const taskController = {
   },
   updateTask: async (req, res) => {
     const taskId = req.params.taskId;
-    let { name, description, priority, labels, startDate, dueDate, finishDate, assignee } = req.body;
+    let { name, description, priority, labels, startDate, dueDate, finishDate, assignee, progress } = req.body;
 
     const task = await Task.findOne({
       _id: taskId,
@@ -202,6 +203,16 @@ const taskController = {
       });
     }
 
+    let status;
+    if (!isNaN(parseInt(progress))) {
+      const progressTemp = parseInt(progress);
+      if (progressTemp == 100) {
+        status = "completed";
+      } else if (progressTemp != 0) {
+        status = "inprogress";
+      }
+    }
+
     const newTask = await Task.findByIdAndUpdate(
       taskId,
       {
@@ -213,11 +224,13 @@ const taskController = {
         assignee,
         dueDate,
         finishDate,
+        progress,
+        status,
       },
       { new: true }
     );
 
-    await new Activity({
+    new Activity({
       user: req.userId,
       project: newTask.project,
       task: taskId,
@@ -265,11 +278,18 @@ const taskController = {
     }
 
     task.status = status;
+
+    if (status == "completed") {
+      task.progress = 100;
+    } else {
+      task.progress = 0;
+    }
+
     if (status == "completed") task.finishDate = new Date();
     else task.finishDate = null;
     await task.save();
 
-    await new Activity({
+    new Activity({
       user: req.userId,
       project: task.project,
       task: taskId,

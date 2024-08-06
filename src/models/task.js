@@ -54,6 +54,9 @@ const TaskSchema = new Schema(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
+      autopopulate: {
+        maxDepth: 1,
+      },
     },
     project: {
       type: Schema.Types.ObjectId,
@@ -76,6 +79,12 @@ const TaskSchema = new Schema(
         message: "Task status must be in ['todo', 'inprogress', 'completed']",
       },
       default: "todo",
+    },
+    progress: {
+      type: Number,
+      min: 0,
+      max: 100,
+      defaul: 0,
     },
     isArchived: {
       type: Boolean,
