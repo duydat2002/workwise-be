@@ -84,7 +84,7 @@ const TaskSchema = new Schema(
       type: Number,
       min: 0,
       max: 100,
-      defaul: 0,
+      default: 0,
     },
     isArchived: {
       type: Boolean,

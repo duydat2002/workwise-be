@@ -13,18 +13,19 @@ const NotificationSchema = new Schema(
         select: "_id uid fullname email avatar",
         maxDepth: 1,
       },
+      required: false,
     },
     receivers: [
       {
         type: Schema.Types.ObjectId,
         ref: "User",
+        required: true,
       },
     ],
     project: {
       type: Schema.Types.ObjectId,
       ref: "Project",
       autopopulate: {
-        select: "_id name background",
         maxDepth: 1,
       },
     },

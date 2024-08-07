@@ -8,7 +8,6 @@ const Approval = require("@/models/approval");
 const Comment = require("@/models/comment");
 const { singleUpload, multipleUpload } = require("@/handlers/firebaseUpload");
 const { cloneDeep } = require("lodash");
-const { sendMail } = require("@/mail/mailer");
 
 const checkUserIsAdmin = async (projectId, userId) => {
   return true;
@@ -83,7 +82,7 @@ const taskController = {
 
     const taskGroup = await TaskGroup.findByIdAndUpdate(taskGroupId, { $addToSet: { tasks: task._id } }, { new: true });
 
-    await new Activity({
+    new Activity({
       user: req.userId,
       project: projectId,
       task: task._id,

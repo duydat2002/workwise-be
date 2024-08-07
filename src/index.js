@@ -8,6 +8,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { Server } = require("socket.io");
 const socketHandle = require("./sockets");
+const initCron = require("./cron");
 
 dotenv.config();
 
@@ -42,6 +43,8 @@ socketHandle(io);
 global.io = io;
 
 routes(app);
+
+initCron();
 
 mongoose
   .connect(process.env.MONGODB_CONNECTION_STRING)

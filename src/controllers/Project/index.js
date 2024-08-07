@@ -303,7 +303,7 @@ const projectController = {
         members: { $elemMatch: { user: req.userId, role: "admin", status: "accepted" } },
       },
       {
-        finishDate: null,
+        $unset: { finishDate: "" },
       },
       { new: true }
     );
