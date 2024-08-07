@@ -178,7 +178,7 @@ const taskController = {
   },
   updateTask: async (req, res) => {
     const taskId = req.params.taskId;
-    let { name, description, priority, labels, startDate, dueDate, finishDate, assignee, progress } = req.body;
+    let { name, description, priority, labels, startDate, dueDate, assignee, progress } = req.body;
 
     const task = await Task.findOne({
       _id: taskId,
@@ -202,13 +202,15 @@ const taskController = {
       });
     }
 
-    let status;
+    let status, finishDate;
     if (!isNaN(parseInt(progress))) {
       const progressTemp = parseInt(progress);
       if (progressTemp == 100) {
         status = "completed";
+        finishDate = new Date();
       } else if (progressTemp != 0) {
         status = "inprogress";
+        finishDate = null;
       }
     }
 
