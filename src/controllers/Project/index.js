@@ -482,8 +482,12 @@ const projectController = {
       });
     }
 
-    const userInfo = await User.findByIdAndUpdate(member, { $pull: { projects: projectId } });
-    const [_p1, notification] = await Promise.all([
+    const [_p1, userInfo] = await Promise.all([
+      Task.updateMany({ assignee: member }, { assignee: null }),
+      User.findByIdAndUpdate(member, { $pull: { projects: projectId } }),
+    ]);
+
+    const [_p2, notification] = await Promise.all([
       new Activity({
         user: req.userId,
         project: projectId,

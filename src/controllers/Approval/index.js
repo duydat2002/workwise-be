@@ -75,17 +75,15 @@ const approvalController = {
 
     task.approvals.unshift(approval.id);
 
-    await approval.save();
-    await task.save();
-    await Promise.all([
-      new Activity({
-        user: req.userId,
-        project: task.project.id,
-        task: taskId,
-        type: "create_approval_task",
-        datas: { approval },
-      }).save(),
-    ]);
+    await Promise.all([approval.save(), task.save()]);
+
+    new Activity({
+      user: req.userId,
+      project: task.project.id,
+      task: taskId,
+      type: "create_approval_task",
+      datas: { approval },
+    }).save();
 
     if (approval.reviewedBy.id != approval.requestedBy.id) {
       const notification = await new Notification({

@@ -97,7 +97,7 @@ const ProjectSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "TaskGroup",
         autopopulate: {
-          maxDepth: 4,
+          maxDepth: 5,
         },
       },
     ],
