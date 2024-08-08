@@ -18,13 +18,18 @@ const port = 3000;
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["https://admin.socket.io", "http://localhost:5555", "http://localhost:5173"],
+    origin: [
+      "https://admin.socket.io",
+      "http://localhost:5555",
+      "http://localhost:5173",
+      "https://workwise-datn.vercel.app",
+    ],
   },
 });
 
 app.use(
   cors({
-    origin: ["http://192.168.1.2:4173", "http://localhost:5173"],
+    origin: ["http://192.168.1.2:4173", "http://localhost:5173", "https://workwise-datn.vercel.app"],
   })
 );
 app.use(cookieParser());
