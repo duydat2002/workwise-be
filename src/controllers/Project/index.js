@@ -9,7 +9,9 @@ const { singleUpload, multipleUpload, deleteFileStorageByUrl } = require("@/hand
 
 const projectController = {
   getProjects: async (req, res) => {
-    const projects = await Project.find({ "members.user": req.userId });
+    const projects = await Project.find({ "members.user": req.userId })
+      .populate({ path: "taskGroups.tasks.assignee" })
+      .exec();
 
     return res.status(200).json({
       success: true,
@@ -472,7 +474,9 @@ const projectController = {
         },
       },
       { new: true }
-    );
+    )
+      .populate({ path: "taskGroups.tasks.assignee" })
+      .exec();
 
     if (!project) {
       return res.status(400).json({
@@ -679,6 +683,25 @@ const projectController = {
       success: true,
       result: { activities },
       message: "Successfully get project activities.",
+    });
+  },
+  getActivities: async (req, res) => {
+    const projects = await Project.find({
+      members: {
+        $elemMatch: { user: req.userId, status: "accepted" },
+      },
+    });
+
+    const projectIds = projects.map((p) => p._id.toString());
+
+    const activities = await Activity.find({ project: { $in: projectIds } })
+      .sort({ createdAt: -1 })
+      .limit(30);
+
+    return res.status(200).json({
+      success: true,
+      result: { activities },
+      message: "Successfully get activities.",
     });
   },
 };
