@@ -103,15 +103,15 @@ const commentController = {
         message: "Cannot found task.",
       });
 
-    const checkPermission =
-      comment.author == req.userId ||
-      task.project.members.map((m) => m.user.id == req.userId && m.role == "admin" && m.status == "accepted");
-    if (!checkPermission)
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "You do not have permission to perform this action.",
-      });
+    // const checkPermission =
+    //   comment.author == req.userId ||
+    //   task.project.members.map((m) => m.user.id == req.userId && m.role == "admin" && m.status == "accepted");
+    // if (!checkPermission)
+    //   return res.status(400).json({
+    //     success: false,
+    //     result: null,
+    //     message: "You do not have permission to perform this action.",
+    //   });
 
     task.comments = task.comments.filter((c) => c.id != commentId);
 

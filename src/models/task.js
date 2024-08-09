@@ -62,6 +62,7 @@ const TaskSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Project",
       autopopulate: {
+        select: "_id id name background createdBy isArchived",
         maxDepth: 1,
       },
     },
@@ -69,6 +70,7 @@ const TaskSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "TaskGroup",
       autopopulate: {
+        select: "_id id name color isArchived",
         maxDepth: 1,
       },
     },
@@ -121,6 +123,8 @@ const TaskSchema = new Schema(
   { timestamps: true }
 );
 
+TaskSchema.plugin(autopopulate);
+
 TaskSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
   const TaskGroup = mongoose.model("TaskGroup");
   const Comment = mongoose.model("Comment");
@@ -142,8 +146,6 @@ TaskSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
 
   next();
 });
-
-TaskSchema.plugin(autopopulate);
 
 const Task = mongoose.model("Task", TaskSchema);
 

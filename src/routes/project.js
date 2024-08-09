@@ -6,6 +6,8 @@ const { upload } = require("@/handlers/firebaseUpload");
 
 const router = express.Router();
 
+router.get("/activities", verifyToken, handleErrors(projectController.getActivities));
+
 router.get("/", verifyToken, handleErrors(projectController.getProjects));
 router.get("/:projectId", verifyToken, handleErrors(projectController.getProjectById));
 router.post("/create", verifyToken, upload.single("background"), handleErrors(projectController.createProject));

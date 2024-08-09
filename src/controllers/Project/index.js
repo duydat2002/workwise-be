@@ -9,9 +9,7 @@ const { singleUpload, multipleUpload, deleteFileStorageByUrl } = require("@/hand
 
 const projectController = {
   getProjects: async (req, res) => {
-    const projects = await Project.find({ "members.user": req.userId })
-      .populate({ path: "taskGroups.tasks.assignee" })
-      .exec();
+    const projects = await Project.find({ "members.user": req.userId });
 
     return res.status(200).json({
       success: true,
@@ -474,9 +472,7 @@ const projectController = {
         },
       },
       { new: true }
-    )
-      .populate({ path: "taskGroups.tasks.assignee" })
-      .exec();
+    );
 
     if (!project) {
       return res.status(400).json({

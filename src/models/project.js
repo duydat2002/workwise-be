@@ -97,13 +97,15 @@ const ProjectSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "TaskGroup",
         autopopulate: {
-          maxDepth: 5,
+          maxDepth: 4,
         },
       },
     ],
   },
   { timestamps: true }
 );
+
+ProjectSchema.plugin(autopopulate);
 
 ProjectSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
   const User = mongoose.model("User");
@@ -126,8 +128,6 @@ ProjectSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
 
   next();
 });
-
-ProjectSchema.plugin(autopopulate);
 
 const Project = mongoose.model("Project", ProjectSchema);
 

@@ -112,15 +112,15 @@ const attachmentController = {
         message: "Cannot found task.",
       });
 
-    const checkPermission =
-      attachment.createdBy == req.userId ||
-      task.project.members.map((m) => m.user.id == req.userId && m.role == "admin" && m.status == "accepted");
-    if (!checkPermission)
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "You do not have permission to perform this action.",
-      });
+    // const checkPermission =
+    //   attachment.createdBy == req.userId ||
+    //   task.project.members.map((m) => m.user.id == req.userId && m.role == "admin" && m.status == "accepted");
+    // if (!checkPermission)
+    //   return res.status(400).json({
+    //     success: false,
+    //     result: null,
+    //     message: "You do not have permission to perform this action.",
+    //   });
 
     task.attachments = task.attachments.filter((a) => a.id != attachmentId);
     const urlAttachment = attachment.url;
