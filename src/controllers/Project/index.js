@@ -9,7 +9,7 @@ const { singleUpload, multipleUpload, deleteFileStorageByUrl } = require("@/hand
 
 const projectController = {
   getProjects: async (req, res) => {
-    const projects = await Project.find({ "members.user": req.userId }).exec();
+    const projects = await Project.find({ "members.user": req.userId });
 
     return res.status(200).json({
       success: true,

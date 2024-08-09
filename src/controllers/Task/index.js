@@ -10,7 +10,7 @@ const { singleUpload, multipleUpload } = require("@/handlers/firebaseUpload");
 const { cloneDeep } = require("lodash");
 
 const checkUserIsAdmin = async (projectId, userId) => {
-  return true;
+  // return true;
   const isAdmin = await Project.findOne({
     _id: projectId,
     isArchived: false,
