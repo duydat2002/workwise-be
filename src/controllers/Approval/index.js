@@ -26,14 +26,6 @@ const approvalController = {
     const { reviewedBy, description } = req.body;
     const files = req.files;
 
-    const task = await Task.findOne({ _id: taskId, isArchived: false });
-    if (!task)
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "Cannot found task.",
-      });
-
     const approval = await new Approval({
       task: taskId,
       requestedBy: req.userId,
@@ -73,11 +65,21 @@ const approvalController = {
       approval.attachments = attachments.map((a) => a.id);
     }
 
+    await approval.save();
+
+    console.log(approval);
+
+    const task = await Task.findOne({ _id: taskId, isArchived: false });
+    if (!task)
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found task.",
+      });
     task.approvals.unshift(approval.id);
+    await task.save();
 
-    await Promise.all([approval.save(), task.save()]);
-
-    new Activity({
+    await new Activity({
       user: req.userId,
       project: task.project.id,
       task: taskId,
@@ -95,12 +97,13 @@ const approvalController = {
           task,
           approval,
         },
-      });
+      }).save();
 
       global.io.to(reviewedBy).emit("notification:new-notification", notification);
     }
 
-    global.io.to(task.project.id).emit("task:updated", task);
+    const newTask = await Task.findById(taskId);
+    global.io.to(task.project.id).emit("task:updated", newTask);
 
     return res.status(200).json({
       success: true,
@@ -211,7 +214,6 @@ const approvalController = {
 
     const approval = await Approval.findOne({
       _id: approvalId,
-      requestedBy: req.userId,
       status: "pending",
     });
     if (!approval)
@@ -301,7 +303,7 @@ const approvalController = {
         },
       }).save();
 
-      global.io.to(approval.reviewedBy.id).emit("notification:new-notification", notification);
+      global.io.to(approval.requestedBy.id).emit("notification:new-notification", notification);
     }
 
     const newTask = await Task.findById(task.id);
@@ -362,7 +364,7 @@ const approvalController = {
         },
       }).save();
 
-      global.io.to(approval.reviewedBy.id).emit("notification:new-notification", notification);
+      global.io.to(approval.requestedBy.id).emit("notification:new-notification", notification);
     }
 
     const newTask = await Task.findById(task.id);

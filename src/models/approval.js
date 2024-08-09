@@ -65,6 +65,7 @@ const ApprovalSchema = new Schema(
 ApprovalSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
   const Task = mongoose.model("Task");
   const Approval = mongoose.model("Approval");
+  const Notification = mongoose.model("Notification");
 
   const deletedApproval = await Approval.findOne(this.getFilter()).lean();
   if (!deletedApproval) next();
@@ -73,6 +74,7 @@ ApprovalSchema.pre(["deleteOne", "findOneAndDelete"], async function (next) {
 
   console.log(`projects/${task.project.id}/tasks/${task.id}/approvals/${deletedApproval._id}`);
 
+  await Notification.deleteMany({ "datas.approval.id": deletedApproval._id });
   await deleteFolderStorage(`projects/${task.project.id}/tasks/${task.id}/approvals/${deletedApproval._id}`);
 
   next();
