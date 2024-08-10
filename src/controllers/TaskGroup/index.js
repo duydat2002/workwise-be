@@ -36,15 +36,15 @@ const taskGroupController = {
       });
     }
 
-    const checkExist = await TaskGroup.findOne({ projectId: projectId, name: name });
+    // const checkExist = await TaskGroup.findOne({ projectId: projectId, name: name });
 
-    if (checkExist) {
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "Task group already exist in this project.",
-      });
-    }
+    // if (checkExist) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     result: null,
+    //     message: "Task group already exist in this project.",
+    //   });
+    // }
 
     const taskGroup = await new TaskGroup({
       name,
@@ -95,18 +95,18 @@ const taskGroupController = {
       });
     }
 
-    const checkExist = await TaskGroup.findOne({
-      _id: { $ne: taskGroupId },
-      name: name,
-    });
+    // const checkExist = await TaskGroup.findOne({
+    //   _id: { $ne: taskGroupId },
+    //   name: name,
+    // });
 
-    if (checkExist) {
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "Task group already exist.",
-      });
-    }
+    // if (checkExist) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     result: null,
+    //     message: "Task group already exist.",
+    //   });
+    // }
 
     const oldTaskGroup = cloneDeep(taskGroup);
 
