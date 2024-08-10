@@ -220,6 +220,10 @@ const userController = {
 
     const receivers = project.members.filter((m) => m.user.id != req.userId).map((m) => m.user.id);
 
+    global.io.to(req.userId).emit("project:join", project.id);
+    global.io.to(req.userId).emit("project:created", project);
+    global.io.to(projectId).to(req.userId).emit("project:updated", project);
+
     const [_p1, _p2, updatedNotification, notification] = await Promise.all([
       User.findByIdAndUpdate(req.userId, {
         $addToSet: { projects: project._id },
@@ -245,11 +249,8 @@ const userController = {
       }).save(),
     ]);
 
-    global.io.to(req.userId).emit("project:join", project.id);
-    global.io.to(req.userId).emit("project:created", project);
     global.io.to(req.userId).emit("notification:updated", updatedNotification);
     global.io.to(projectId).except(req.userId).emit("notification:new-notification", notification);
-    global.io.to(projectId).to(req.userId).emit("project:updated", project);
 
     return res.status(200).json({
       success: true,
@@ -336,6 +337,9 @@ const userController = {
 
     const receivers = project.members.filter((m) => m.role == "admin" && m.user.id != req.userId).map((m) => m.user.id);
 
+    global.io.to(req.userId).emit("project:deleted", project.id);
+    global.io.to(projectId).except(req.userId).emit("project:updated", project);
+
     const [_p1, _p2, notification] = await Promise.all([
       User.findByIdAndUpdate(req.userId, { $pull: { projects: project._id } }),
       new Activity({
@@ -354,9 +358,7 @@ const userController = {
       }).save(),
     ]);
 
-    global.io.to(req.userId).emit("project:deleted", project.id);
     global.io.to(projectId).except(req.userId).emit("notification:new-notification", notification);
-    global.io.to(projectId).except(req.userId).emit("project:updated", project);
 
     return res.status(200).json({
       success: true,

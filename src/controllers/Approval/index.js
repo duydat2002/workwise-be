@@ -26,6 +26,14 @@ const approvalController = {
     const { reviewedBy, description } = req.body;
     const files = req.files;
 
+    const task = await Task.findOne({ _id: taskId, isArchived: false });
+    if (!task)
+      return res.status(400).json({
+        success: false,
+        result: null,
+        message: "Cannot found task.",
+      });
+
     const approval = await new Approval({
       task: taskId,
       requestedBy: req.userId,
@@ -67,15 +75,6 @@ const approvalController = {
 
     await approval.save();
 
-    console.log(approval);
-
-    const task = await Task.findOne({ _id: taskId, isArchived: false });
-    if (!task)
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "Cannot found task.",
-      });
     task.approvals.unshift(approval.id);
     await task.save();
 

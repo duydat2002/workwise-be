@@ -193,14 +193,14 @@ const taskController = {
       });
     }
 
-    const isAdmin = await checkUserIsAdmin(task.project.id, req.userId);
-    if (!isAdmin) {
-      return res.status(400).json({
-        success: false,
-        result: null,
-        message: "Cannot found project or you do not have permission to perform this action.",
-      });
-    }
+    // const isAdmin = await checkUserIsAdmin(task.project.id, req.userId);
+    // if (!isAdmin) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     result: null,
+    //     message: "Cannot found project or you do not have permission to perform this action.",
+    //   });
+    // }
 
     let status, finishDate;
     if (!isNaN(parseInt(progress))) {

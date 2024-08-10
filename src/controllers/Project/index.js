@@ -401,8 +401,9 @@ const projectController = {
       },
     }).save();
 
-    global.io.to(members).emit("notification:new-notification", notification);
     global.io.to(projectId).emit("project:updated", project);
+
+    global.io.to(members).emit("notification:new-notification", notification);
 
     return res.status(200).json({
       success: true,
@@ -507,9 +508,12 @@ const projectController = {
       }).save(),
     ]);
 
-    global.io.to(member).emit("project:deleted", project.id);
+    const projectTemp = await Project.findById(projectId);
+
+    global.io.to(member).emit("project:deleted", projectId);
+    global.io.to(projectId).emit("project:updated", projectTemp);
+
     global.io.to(member).emit("notification:new-notification", notification);
-    global.io.to(projectId).emit("project:updated", project);
 
     return res.status(200).json({
       success: true,
